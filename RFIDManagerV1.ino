@@ -5,6 +5,7 @@
 #include <GyverButton.h>
 #include <EEPROM.h>
 
+//-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
 #define LCD_CLK A4
 #define LCD_DIN A3
@@ -12,8 +13,10 @@
 #define LCD_CE A1
 #define LCD_RST A0
 
+// Sensor button
 #define BUTTON_PIN 10
 
+//-------------------- Objects init --------------------
 // GButton button(BUTTON_PIN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 

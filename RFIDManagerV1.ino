@@ -7,6 +7,7 @@
 
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
+
 #define LCD_CLK A4
 #define LCD_DIN A3
 #define LCD_DC A2
@@ -17,32 +18,69 @@
 #define BUTTON_PIN 10
 
 //-------------------- Objects init --------------------
-// GButton button(BUTTON_PIN);
+GButton button(BUTTON_PIN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
+enum Mode {
+    read,
+    write,
+    emulator
+};
+
+Mode mode; 
+
 void setup() {
-    
-    // button.setTickMode(AUTO);
-        //Initialize Display
-    display.begin();
-
-    // you can change the contrast around to adapt the display for the best viewing!
-    display.setContrast(30);
-
-    // Clear the buffer.
-    display.clearDisplay();
-
-    display.setTextSize(1);
-    display.setTextColor(BLACK);
-    display.setCursor(0,0);
-    display.println("Hello world!");
-    display.display();
-    // delay(2000);
-    // display.clearDisplay();
+    setupDisplay();
+    button.setTickMode(AUTO);
+    mode = read;
+    setReadMode();
 }
 
 
 void loop() {
+    if( button.isSingle()) {
+        display.clearDisplay();
+        switch (mode)
+        {
+        case read:
+            setWriteMode();
+            break;
+        case write:
+            setEmulatorMode();
+            break;
+        case emulator:
+            setReadMode();
+            break;
+        }
+    }
+}
 
+void setupDisplay() {
+    display.begin();
+    display.setContrast(27);
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(BLACK);
+}
+
+void setReadMode() {
+    display.setCursor(0,0);
+    display.println("Read mode");
+    display.display();
+    mode = read;
+}
+
+void setWriteMode() {
+    display.setCursor(0,0);
+    display.println("Write mode");
+    display.display();
+    mode = write;
+}
+
+void setEmulatorMode() {
+    display.setCursor(0,0);
+    display.println("Emulator mode");
+    display.display();
+    mode = emulator;
 }
 

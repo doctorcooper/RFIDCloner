@@ -3,5 +3,6 @@
     "configuration": "cpu=atmega328old",
     "sketch": "RFIDManagerV1.ino",
     "port": "/dev/tty.usbserial-1430",
-    "programmer": "ArduinoISP"
+    "programmer": "ArduinoISP",
+    "output": "../ArduinoOutput"
 }

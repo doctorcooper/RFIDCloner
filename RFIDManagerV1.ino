@@ -33,12 +33,16 @@ void setup() {
     setupDisplay();
     button.setTickMode(AUTO);
     mode = read;
-    setReadMode();
+    setReadMode(); // TODO: - save mode to EEPROM and read it on start
 }
 
-
 void loop() {
-    if( button.isSingle()) {
+    readButton();
+}
+
+void readButton() {
+    // Single tap -> Change mode
+    if (button.isSingle()) {
         display.clearDisplay();
         switch (mode)
         {
@@ -52,6 +56,18 @@ void loop() {
             setReadMode();
             break;
         }
+    }
+    // Double tap -> Next key from EEPROM
+    if (button.isDouble()) {
+        nextKey();
+    }
+    // Triple tap -> Previous key from EEPROM
+    if (button.isTriple()) {
+        prevKey();
+    }
+    // Hold key -> Save key from buffer to EEPROM
+    if (button.isHold()) {
+        saveKey();
     }
 }
 
@@ -82,5 +98,17 @@ void setEmulatorMode() {
     display.println("Emulator mode");
     display.display();
     mode = emulator;
+}
+
+void nextKey() {
+
+}
+
+void prevKey() {
+
+}
+
+void saveKey() {
+
 }
 

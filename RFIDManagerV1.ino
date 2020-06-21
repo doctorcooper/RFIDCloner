@@ -18,34 +18,46 @@
 // Sensor button
 #define BUTTON_PIN 10
 
-
+#define delayAction 500
 
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
-enum Mode {
+unsigned long sequenceTimer = millis();
+
+enum Mode
+{
     read,
     write,
     emulator
 };
 
-Mode mode; 
+Mode mode;
 
-void setup() {
+void setup()
+{
     setupDisplay();
     button.setTickMode(AUTO);
     mode = read;
     setReadMode(); // TODO: - save mode to EEPROM and read it on start
+    Serial.begin(115200);
 }
 
-void loop() {
+void loop()
+{
     readButton();
+    if (millis() - sequenceTimer < delayAction)
+        return;
+    sequenceTimer = millis();
+    action();
 }
 
-void readButton() {
+void readButton()
+{
     // Single tap -> Change mode
-    if (button.isSingle()) {
+    if (button.isSingle())
+    {
         display.clearDisplay();
         switch (mode)
         {
@@ -61,20 +73,40 @@ void readButton() {
         }
     }
     // Double tap -> Next key from EEPROM
-    if (button.isDouble()) {
+    if (button.isDouble())
+    {
         nextKey();
     }
     // Triple tap -> Previous key from EEPROM
-    if (button.isTriple()) {
+    if (button.isTriple())
+    {
         prevKey();
     }
     // Hold key -> Save key from buffer to EEPROM
-    if (button.isHold()) {
+    if (button.isHold())
+    {
         saveKey();
     }
 }
 
-void setupDisplay() {
+void action()
+{
+    switch (mode)
+        {
+        case read:
+            if (searchEM_Marine(true)) showKeyID();
+            break;
+        case write:
+            write2rfid();
+            break;
+        case emulator:
+            
+            break;
+        }
+}
+
+void setupDisplay()
+{
     display.begin();
     display.setContrast(27);
     display.clearDisplay();
@@ -82,36 +114,52 @@ void setupDisplay() {
     display.setTextColor(BLACK);
 }
 
-void setReadMode() {
-    display.setCursor(0,0);
+void setReadMode()
+{
+    display.setCursor(0, 0);
     display.println("Read mode");
     display.display();
     mode = read;
 }
 
-void setWriteMode() {
-    display.setCursor(0,0);
+void setWriteMode()
+{
+    display.setCursor(0, 0);
     display.println("Write mode");
     display.display();
     mode = write;
 }
 
-void setEmulatorMode() {
-    display.setCursor(0,0);
+void setEmulatorMode()
+{
+    display.setCursor(0, 0);
     display.println("Emulator mode");
     display.display();
     mode = emulator;
 }
 
-void nextKey() {
-
+void nextKey()
+{
 }
 
-void prevKey() {
-
+void prevKey()
+{
 }
 
-void saveKey() {
+void saveKey()
+{
+}
 
+void showKeyID() {
+    String key = "";
+    for (byte i = 0; i < 8; i++) 
+    {
+        key += String(keyID[i], HEX);
+        if (i != 7) key += ":";
+    }
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println(key);
+    display.display();
 }
 

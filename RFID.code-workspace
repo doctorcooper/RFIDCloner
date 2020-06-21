@@ -6,7 +6,9 @@
 	],
 	"settings": {
 		"files.associations": {
-			"cstddef": "cpp"
+			"cstddef": "cpp",
+			"istream": "cpp",
+			"__node_handle": "cpp"
 		}
 	}
 }

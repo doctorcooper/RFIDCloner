@@ -1,7 +1,7 @@
 #include "RFID125.h"
 #include <Arduino.h>
 
-byte rfidData[5]; // значащие данные frid em-marine
+byte rfidData[5]; // значащие данные rfid em-marine
 byte keyID[8];    // ID ключа для записи
 byte addr[8];     // временный буфер
 
@@ -36,7 +36,7 @@ byte ttAComp(unsigned long timeOut = 7000)
 { // pulse 0 or 1 or -1 if timeout
     byte AcompState, AcompInitState;
     unsigned long tEnd = micros() + timeOut;
-    AcompInitState = bitRead(ACSR, ACO); // читаем флаг компаратора
+    AcompInitState = bitRead(ACSR, ACO);                 // читаем флаг компаратора
     do
     {
         AcompState = bitRead(ACSR, ACO);                 // читаем флаг компаратора
@@ -128,17 +128,14 @@ bool searchEM_Marine(bool copyKey = true)
     result = true;
     for (byte i = 0; i < 8; i++)
     {
-        if (copyKey)
-            keyID[i] = addr[i];
-        // Serial.print(addr[i], HEX); Serial.print(":");
+        if (copyKey) keyID[i] = addr[i];
     }
     //   Serial.print(F(" ( id "));
     //   Serial.print(rfidData[0]); Serial.print(" key ");
-    unsigned long keyNum = (unsigned long)rfidData[1] << 24 | (unsigned long)rfidData[2] << 16 | (unsigned long)rfidData[3] << 8 | (unsigned long)rfidData[4];
+    // unsigned long keyNum = (unsigned long)rfidData[1] << 24 | (unsigned long)rfidData[2] << 16 | (unsigned long)rfidData[3] << 8 | (unsigned long)rfidData[4];
     //   Serial.print(keyNum);
     //   Serial.println(F(") Type: EM-Marie "));
-    if (!copyKey)
-        TCCR2A &= 0b00111111; // Оключить ШИМ COM2A (pin 11)
+    if (!copyKey) TCCR2A &= 0b00111111; // Оключить ШИМ COM2A (pin 11)
     return result;
 }
 
@@ -151,7 +148,7 @@ void rfidGap(unsigned int tm)
 
 void TxBitRfid(byte data)
 {
-    if (data & 1)
+    if (data & 1) 
         delayMicroseconds(54 * 8);
     else
         delayMicroseconds(24 * 8);
@@ -189,6 +186,50 @@ bool sendOpT5557(byte opCode, unsigned long password = 0, byte lockBit = 0, unsi
     return true;
 }
 
+bool T5557_blockRead(byte* buf) {
+  byte ti; byte j = 0, k=0;
+  for (int i = 0; i < 33; i++)
+  {                           // читаем стартовый 0 и 32 значащих bit
+    ti = ttAComp(2000);
+    if (ti == 2)  break;                                //timeout
+    if ( ( ti == 1 ) && ( i == 0)) { ti = 2; break; }     // если не находим стартовый 0 - это ошибка
+    if (i > 0)
+    {                                         //начиная с 1-го бита пишем в буфер
+      if (ti) bitSet(buf[(i - 1) >> 3], 7 - j);
+        else bitClear(buf[(i-1) >> 3], 7 - j);
+      j++; 
+      if (j > 7) j = 0;
+    }
+  }
+  if (ti == 2) return false;                           //timeout
+  return true;
+}
+
+bool checkWriteState() {
+  unsigned long data32, data33; byte buf[4] = {0, 0, 0, 0}; 
+  rfidACsetOn();                // включаем генератор 125кГц и компаратор
+  delay(13);                    //13 мс длятся переходные процессы детектора
+  rfidGap(30 * 8);              //start gap
+  sendOpT5557(0b11, 0, 0, 0, 1); //переходим в режим чтения Vendor ID 
+  if (!T5557_blockRead(buf)) return false; 
+  data32 = (unsigned long)buf[0] << 24 | (unsigned long)buf[1] << 16 | (unsigned long)buf[2] << 8 | (unsigned long)buf[3];
+  delay(4);
+  rfidGap(20 * 8);          //gap  
+  data33 = 0b00000000000101001000000001000000 | (0 << 4);   //конфиг регистр 0b00000000000101001000000001000000
+  sendOpT5557(0b10, 0, 0, data33, 0);   //передаем конфиг регистр
+  delay(4);
+  rfidGap(30 * 8);          //start gap
+  sendOpT5557(0b11, 0, 0, 0, 1); //переходим в режим чтения Vendor ID 
+  if (!T5557_blockRead(buf)) return false; 
+  data33 = (unsigned long)buf[0] << 24 | (unsigned long)buf[1] << 16 | (unsigned long)buf[2] << 8 | (unsigned long)buf[3];
+  sendOpT5557(0b00, 0, 0, 0, 0);  // send Reset
+  delay(6);
+  if (data32 != data33) return false;    
+//   Serial.print(F(" The rfid RW-key is T5557. Vendor ID is "));
+//   Serial.println(data32, HEX);
+  return true;
+}
+
 bool write2rfidT5557(byte *buf)
 {
     bool result;
@@ -199,7 +240,7 @@ bool write2rfidT5557(byte *buf)
         data32 = (unsigned long)buf[0 + (k << 2)] << 24 | (unsigned long)buf[1 + (k << 2)] << 16 | (unsigned long)buf[2 + (k << 2)] << 8 | (unsigned long)buf[3 + (k << 2)];
         rfidGap(30 * 8);                        //start gap
         sendOpT5557(0b10, 0, 0, data32, k + 1); //передаем 32 бита ключа в blok k
-        // Serial.print('*');
+        Serial.print('*');
         delay(6);
     }
     delay(6);
@@ -216,18 +257,17 @@ bool write2rfidT5557(byte *buf)
         }
     if (!result)
     {
-        // Serial.println(F(" The key copy faild"));
+        Serial.println(F(" The key copy faild"));
         // OLED_printError(F("The key copy faild"));
         // Sd_ErrorBeep();
     }
     else
     {
-        // Serial.println(F(" The key has copied successesfully"));
+        Serial.println(F(" The key has copied successesfully"));
         // OLED_printError(F("The key has copied"), false);
         // Sd_ReadOK();
-        delay(2000);
     }
-    //   digitalWrite(R_Led, HIGH);
+    delay(2000);
     return result;
 }
 
@@ -245,7 +285,7 @@ bool write2rfid()
         if (check)
         {   // если коды совпадают, ничего писать не нужно
             //   digitalWrite(R_Led, LOW);
-            //   Serial.println(F(" it is the same key. Writing in not needed."));
+              Serial.println(F(" it is the same key. Writing in not needed."));
             //   OLED_printError(F("It is the same key"));
             //   Sd_ErrorBeep();
             //   digitalWrite(R_Led, HIGH);
@@ -253,16 +293,14 @@ bool write2rfid()
             return false;
         }
     }
-    write2rfidT5557(keyID); //пишем T5557
-
-    return false;
+    if (checkWriteState()) write2rfidT5557(keyID); 
+    return true;
 }
 
 void SendEM_Marine(byte *buf)
 {
     TCCR2A &= 0b00111111; // отключаем шим
     digitalWrite(FrequencyGen, LOW);
-    //FF:A9:8A:A4:87:78:98:6A
     delay(20);
     for (byte k = 0; k < 10; k++)
     {

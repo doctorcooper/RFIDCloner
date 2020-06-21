@@ -4,6 +4,7 @@
 #include <Adafruit_PCD8544.h>
 #include <GyverButton.h>
 #include <EEPROM.h>
+#include "RFID125.h"
 
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
@@ -16,6 +17,8 @@
 
 // Sensor button
 #define BUTTON_PIN 10
+
+
 
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN);

@@ -5,6 +5,7 @@
 #include <GyverButton.h>
 #include <EEPROM.h>
 #include "RFID125.h"
+#include "Strings.h"
 
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
@@ -26,20 +27,14 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LC
 
 unsigned long sequenceTimer = millis();
 
-enum Mode
-{
-    read,
-    write,
-    emulator
-} mode;
+enum Mode { read, write, emulator } mode;
 
 void setup()
 {
     setupDisplay();
     button.setTickMode(AUTO);
-    mode = read;
-    setReadMode(); // TODO: - save mode to EEPROM and read it on start
-    Serial.begin(115200);
+    mode = read; // TODO: - save mode to EEPROM and read it on start
+    // Serial.begin(115200); // For debug
 }
 
 void loop()
@@ -55,17 +50,16 @@ void readButton()
     // Single tap -> Change mode
     if (button.isSingle())
     {
-        display.clearDisplay();
         switch (mode)
         {
-        case read:
-            setWriteMode();
+        case read: 
+            mode = write;
             break;
         case write:
-            setEmulatorMode();
+            mode = emulator;
             break;
         case emulator:
-            setReadMode();
+            mode = read;
             break;
         }
     }
@@ -75,22 +69,21 @@ void readButton()
     if (button.isTriple()) prevKey();
     // Hold key -> Save key from buffer to EEPROM
     if (button.isHold()) saveKey();
+    refreshDisplay();
 }
 
 void action()
 {
     switch (mode)
-        {
-        case read:
-            if (searchRFID(true)) showKeyID();
-            break;
-        case write:
-            write2rfid();
-            break;
-        case emulator:
-            SendEM_Marine(keyID);
-            break;
-        }
+    {
+    case read:
+        if (searchRFID(true)) refreshDisplay();
+        break;
+    case write: write2rfid(); // TODO: - Bool on success
+        break;
+    case emulator: SendEM_Marine(keyID);
+        break;
+    }
 }
 
 void setupDisplay()
@@ -100,30 +93,6 @@ void setupDisplay()
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(BLACK);
-}
-
-void setReadMode()
-{
-    display.setCursor(0, 0);
-    display.println("Read mode");
-    display.display();
-    mode = read;
-}
-
-void setWriteMode()
-{
-    display.setCursor(0, 0);
-    display.println("Write mode");
-    display.display();
-    mode = write;
-}
-
-void setEmulatorMode()
-{
-    display.setCursor(0, 0);
-    display.println("Emulator mode");
-    display.display();
-    mode = emulator;
 }
 
 void nextKey()
@@ -138,9 +107,10 @@ void saveKey()
 {
 }
 
-void showKeyID() {
+void showKeyID()
+{
     String key = "";
-    for (byte i = 0; i < 8; i++) 
+    for (byte i = 0; i < 8; i++)
     {
         key += String(keyID[i], HEX);
         if (i != 7) key += ":";
@@ -148,5 +118,45 @@ void showKeyID() {
     display.clearDisplay();
     display.setCursor(0, 0);
     display.println(key);
+    display.display();
+}
+
+void refreshDisplay()
+{
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    switch (mode)
+    {
+    case read:
+        for (byte i = 0; i < strlen_P(readMode_txt); i++)
+        {
+            display.print((char)pgm_read_byte(&readMode_txt[i]));
+        }
+        break;
+    case write:
+        for (byte i = 0; i < strlen_P(writeMode_txt); i++)
+        {
+            display.print((char)pgm_read_byte(&writeMode_txt[i]));
+        }
+        break;
+    case emulator:
+        for (byte i = 0; i < strlen_P(emulatorMode_txt); i++)
+        {
+            display.print((char)pgm_read_byte(&emulatorMode_txt[i]));
+        }
+        break;
+    }
+    display.println();
+
+    for (byte i = 0; i < strlen_P(key_txt); i++)
+    {
+        display.print((char)pgm_read_byte(&key_txt[i]));
+    }
+    for (byte i = 0; i < 8; i++)
+    {
+        display.print(keyID[i], HEX);
+        if (i != 7) display.print(":");
+    }
+
     display.display();
 }

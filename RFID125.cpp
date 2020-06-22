@@ -1,4 +1,5 @@
 #include "RFID125.h"
+#include "MyDelays.h"
 #include <Arduino.h>
 
 byte rfidData[5];                                               // Number on the key
@@ -278,11 +279,11 @@ bool write2rfid()
     return true;
 }
 
-void SendEM_Marine(byte *buffer)                                // send key 
+void SendEM_Marine(byte *buffer)                                // send key (Test version)
 {
     TCCR2A &= 0b00111111;                                   
     digitalWrite(RFID_PIN, LOW);
-    delay(20);
+    myDelay(20);
     for (byte k = 0; k < 10; k++)
     {
         for (byte i = 0; i < 8; i++)
@@ -291,17 +292,18 @@ void SendEM_Marine(byte *buffer)                                // send key
             {
                 if (1 & (buffer[i] >> (7 - j)))
                 {
-                    pinMode(RFID_PIN, INPUT);
-                    delayMicroseconds(250);
+                    bitSet(DDRD, 3);
+                    myDelayMicroseconds(250);
                     pinMode(RFID_PIN, OUTPUT);
-                    delayMicroseconds(250);
+                    bitClear(DDRD, 3);
+                    myDelayMicroseconds(250);
                 }
                 else
                 {
-                    pinMode(RFID_PIN, OUTPUT);
-                    delayMicroseconds(250);
-                    pinMode(RFID_PIN, INPUT);
-                    delayMicroseconds(250);
+                    bitClear(DDRD, 3);
+                    myDelayMicroseconds(250);
+                    bitSet(DDRD, 3);
+                    myDelayMicroseconds(250);
                 }
             }
         }

@@ -2,7 +2,7 @@
     "board": "arduino:avr:nano",
     "configuration": "cpu=atmega328old",
     "sketch": "RFIDManagerV1.ino",
-    "port": "/dev/tty.usbserial-1D150",
+    "port": "/dev/tty.usbserial-1430",
     "programmer": "ArduinoISP",
     "output": "../ArduinoOutput"
 }

@@ -31,9 +31,7 @@ enum Mode
     read,
     write,
     emulator
-};
-
-Mode mode;
+} mode;
 
 void setup()
 {

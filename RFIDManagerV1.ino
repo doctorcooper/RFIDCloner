@@ -98,7 +98,7 @@ void action()
             write2rfid();
             break;
         case emulator:
-            
+            SendEM_Marine(keyID);
             break;
         }
 }

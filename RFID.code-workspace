@@ -8,7 +8,8 @@
 		"files.associations": {
 			"cstddef": "cpp",
 			"istream": "cpp",
-			"__node_handle": "cpp"
+			"__node_handle": "cpp",
+			"cstdio": "cpp"
 		}
 	}
 }

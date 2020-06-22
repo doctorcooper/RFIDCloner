@@ -45,8 +45,7 @@ void setup()
 void loop()
 {
     readButton();
-    if (millis() - sequenceTimer < delayAction)
-        return;
+    if (millis() - sequenceTimer < delayAction) return;
     sequenceTimer = millis();
     action();
 }
@@ -71,20 +70,11 @@ void readButton()
         }
     }
     // Double tap -> Next key from EEPROM
-    if (button.isDouble())
-    {
-        nextKey();
-    }
+    if (button.isDouble()) nextKey();
     // Triple tap -> Previous key from EEPROM
-    if (button.isTriple())
-    {
-        prevKey();
-    }
+    if (button.isTriple()) prevKey();
     // Hold key -> Save key from buffer to EEPROM
-    if (button.isHold())
-    {
-        saveKey();
-    }
+    if (button.isHold()) saveKey();
 }
 
 void action()
@@ -92,7 +82,7 @@ void action()
     switch (mode)
         {
         case read:
-            if (searchEM_Marine(true)) showKeyID();
+            if (searchRFID(true)) showKeyID();
             break;
         case write:
             write2rfid();
@@ -160,4 +150,3 @@ void showKeyID() {
     display.println(key);
     display.display();
 }
-

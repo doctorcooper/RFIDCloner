@@ -102,7 +102,7 @@ void rfidACsetOn()                                              // включа�
     OCR2A = 63;                                                 // 63 тактов на период. Частота на COM2A (pin 11) 16000/64/2 = 125 кГц, Скважнось COM2A в этом режиме всегда 50%
     OCR2B = 31;                                                 // Скважность COM2B 32/64 = 50%  Частота на COM2A (pin 3) 16000/64 = 250 кГц //31 15???
     bitClear(ADCSRB, ACME);                                     // отключаем мультиплексор AC
-    bitClear(ACSR, ACBG);   // отключаем от входа Ain0 1.1V
+    bitClear(ACSR, ACBG);                                       // отключаем от входа Ain0 1.1V
 }
 
 bool searchRFID(bool copyKey = true)
@@ -121,12 +121,13 @@ bool searchRFID(bool copyKey = true)
     {
         if (copyKey) keyID[i] = addr[i];
     }
+    // debug data
     //   Serial.print(F(" ( id "));
     //   Serial.print(rfidData[0]); Serial.print(" key ");
     // unsigned long keyNum = (unsigned long)rfidData[1] << 24 | (unsigned long)rfidData[2] << 16 | (unsigned long)rfidData[3] << 8 | (unsigned long)rfidData[4];
     //   Serial.print(keyNum);
     //   Serial.println(F(") Type: EM-Marie "));
-    if (!copyKey) TCCR2A &= 0b00111111; // Оключить ШИМ COM2A (pin 11)
+    if (!copyKey) TCCR2A &= 0b00111111;                         // Оключить ШИМ COM2A (pin 11)
     return result;
 }
 
@@ -224,8 +225,7 @@ bool write2rfidT5557(byte *buffer)
     { // send key data
         data32 = (unsigned long)buffer[0 + (k << 2)] << 24 | (unsigned long)buffer[1 + (k << 2)] << 16 | (unsigned long)buffer[2 + (k << 2)] << 8 | (unsigned long)buffer[3 + (k << 2)];
         rfidGap(30 * 8);                                        // start gap
-        sendOpT5557(0b10, 0, 0, data32, k + 1);                 // передаем 32 бита ключа в blok k
-        Serial.print('*');
+        sendOpT5557(0b10, 0, 0, data32, k + 1);                 // передаем 32 бита ключа в block k
         delay(6);
     }
     delay(6);
@@ -235,28 +235,17 @@ bool write2rfidT5557(byte *buffer)
     result = readRFID(addr);
     TCCR2A &= 0b00111111;                                       // Оключить ШИМ COM2A (pin 11)
     for (byte i = 0; i < 8; i++)
+    {
         if (addr[i] != keyID[i])
         {
             result = false;
             break;
         }
-    if (!result)
-    {
-        Serial.println(F(" The key copy faild"));
-        // OLED_printError(F("The key copy faild"));
-        // Sd_ErrorBeep();
     }
-    else
-    {
-        Serial.println(F(" The key has copied successesfully"));
-        // OLED_printError(F("The key has copied"), false);
-        // Sd_ReadOK();
-    }
-    delay(2000);
     return result;
 }
 
-bool write2rfid()
+byte write2rfid()
 {
     bool check = true;
     if (searchRFID(false))
@@ -266,24 +255,27 @@ bool write2rfid()
             {
                 check = false;
                 break;
-            }                                   
-        if (check)
-        {   // если коды совпадают, ничего писать не нужно
-              Serial.println(F(" it is the same key. Writing in not needed."));
-            //   OLED_printError(F("It is the same key"));
-            delay(1000);
-            return false;
-        }
+            }  
+        if (check)                                                 // если коды совпадают, ничего писать не нужно
+        {       
+            return 3;                                           // Error - same key
+        }                                   
     }
-    if (checkWriteState()) write2rfidT5557(keyID); 
-    return true;
+    
+    if (checkWriteState()) 
+    {
+        if (write2rfidT5557(keyID)) return 1;                   // Write ok
+            else return 2;                                      // Write error
+                                              
+    }
+    return 0;                                                   // Idle
 }
 
-void SendEM_Marine(byte *buffer)                                // send key (Test version)
+void sendEM_Marine(byte *buffer)                                // send key (Test version)
 {
     TCCR2A &= 0b00111111;                                   
-    digitalWrite(RFID_PIN, LOW);
-    myDelay(20);
+    bitClear(PORTD, 3);
+    delay(20);
     for (byte k = 0; k < 10; k++)
     {
         for (byte i = 0; i < 8; i++)
@@ -293,17 +285,16 @@ void SendEM_Marine(byte *buffer)                                // send key (Tes
                 if (1 & (buffer[i] >> (7 - j)))
                 {
                     bitSet(DDRD, 3);
-                    myDelayMicroseconds(250);
-                    pinMode(RFID_PIN, OUTPUT);
+                    delayMicroseconds(250);
                     bitClear(DDRD, 3);
-                    myDelayMicroseconds(250);
+                    delayMicroseconds(250);
                 }
                 else
                 {
                     bitClear(DDRD, 3);
-                    myDelayMicroseconds(250);
+                    delayMicroseconds(250);
                     bitSet(DDRD, 3);
-                    myDelayMicroseconds(250);
+                    delayMicroseconds(250);
                 }
             }
         }

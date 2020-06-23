@@ -9,7 +9,8 @@
 			"cstddef": "cpp",
 			"istream": "cpp",
 			"__node_handle": "cpp",
-			"cstdio": "cpp"
+			"cstdio": "cpp",
+			"__locale": "cpp"
 		}
 	}
 }

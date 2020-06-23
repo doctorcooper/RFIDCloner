@@ -19,13 +19,16 @@
 // Sensor button
 #define BUTTON_PIN 10
 
-#define delayAction 500
+#define delayAction 800
+#define delayWrite 1000
 
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
-unsigned long sequenceTimer = millis();
+unsigned long actionTimeStamp = millis();
+unsigned long writeTimeStamp = millis();
+byte writeStatus;
 
 enum Mode { read, write, emulator } mode;
 
@@ -34,14 +37,14 @@ void setup()
     setupDisplay();
     button.setTickMode(AUTO);
     mode = read; // TODO: - save mode to EEPROM and read it on start
-    // Serial.begin(115200); // For debug
+    Serial.begin(115200); // For debug
 }
 
 void loop()
 {
     readButton();
-    if (millis() - sequenceTimer < delayAction) return;
-    sequenceTimer = millis();
+    if (millis() - actionTimeStamp < delayAction) return;
+    actionTimeStamp = millis();
     action();
 }
 
@@ -79,9 +82,10 @@ void action()
     case read:
         if (searchRFID(true)) refreshDisplay();
         break;
-    case write: write2rfid(); // TODO: - Bool on success
+    case write: 
+        writeAction();
         break;
-    case emulator: SendEM_Marine(keyID);
+    case emulator: sendEM_Marine(keyID);
         break;
     }
 }
@@ -107,18 +111,12 @@ void saveKey()
 {
 }
 
-void showKeyID()
+void writeAction() 
 {
-    String key = "";
-    for (byte i = 0; i < 8; i++)
-    {
-        key += String(keyID[i], HEX);
-        if (i != 7) key += ":";
-    }
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println(key);
-    display.display();
+    if (millis() - writeTimeStamp < delayWrite) return;
+    writeTimeStamp = millis();
+    writeStatus = write2rfid();
+    refreshDisplay();
 }
 
 void refreshDisplay()
@@ -146,6 +144,7 @@ void refreshDisplay()
         }
         break;
     }
+
     display.println();
 
     for (byte i = 0; i < strlen_P(key_txt); i++)
@@ -156,6 +155,39 @@ void refreshDisplay()
     {
         display.print(keyID[i], HEX);
         if (i != 7) display.print(":");
+    }
+
+    display.println();
+
+    if (mode == write) {
+        switch (writeStatus)
+        {
+        case 1:
+            for (byte i = 0; i < strlen_P(writeOK_txt); i++)
+            {
+                display.print((char)pgm_read_byte(&writeOK_txt[i]));
+            }
+            break;
+        case 2: 
+            for (byte i = 0; i < strlen_P(writeFailed_txt); i++)
+            {
+                display.print((char)pgm_read_byte(&writeFailed_txt[i]));
+            }
+            break;
+        case 3:
+            for (byte i = 0; i < strlen_P(sameKey_txt); i++)
+            {
+                display.print((char)pgm_read_byte(&sameKey_txt[i]));
+            }
+            break;
+        default:
+            for (byte i = 0; i < strlen_P(readyToWrite_txt); i++)
+            {
+                display.print((char)pgm_read_byte(&readyToWrite_txt[i]));
+            }
+            break;
+        }
+        display.println();
     }
 
     display.display();

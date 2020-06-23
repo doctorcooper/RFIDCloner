@@ -7,5 +7,5 @@
 extern byte keyID[];        // key ID to write
 
 bool searchRFID(bool copyKey);
-bool write2rfid();
-void SendEM_Marine(byte *buffer);
+byte write2rfid();
+void sendEM_Marine(byte *buffer);

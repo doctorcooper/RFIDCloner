@@ -272,6 +272,7 @@ byte write2rfid()
 
 void sendEM_Marine(byte *buffer)                                // send key (Test version)
 {
+    
     TCCR2A &= 0b00111111;                                   
     bitClear(PORTD, 3);
     delay(20);

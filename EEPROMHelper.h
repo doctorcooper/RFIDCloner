@@ -54,13 +54,13 @@ bool EEPROM_AddKey(byte buffer[])
     if (EEPROM_key_count < maxKeyCount) EEPROM_key_index = EEPROM_key_count;
         else EEPROM_key_index++;
     if (EEPROM_key_index > EEPROM_key_count) EEPROM_key_index = 1;
-    Serial.println(F("Adding to EEPROM"));
+    // Serial.println(F("Adding to EEPROM"));
     for (byte i = 0; i < 8; i++) 
     {
         buffer1[i] = buffer[i];
-        Serial.print(buffer[i], HEX); Serial.print(F(":"));  
+        // Serial.print(buffer[i], HEX); Serial.print(F(":"));  
     }
-    Serial.println();
+    // Serial.println();
     EEPROM.put(EEPROM_key_index * sizeof(buffer1), buffer1);
     EEPROM.update(0, EEPROM_key_count);
     EEPROM.update(1, EEPROM_key_index);

@@ -22,6 +22,8 @@
 #define delayAction 800
 #define delayWrite 1000
 
+#define batPit A7
+
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
@@ -44,6 +46,7 @@ void setup()
     maxKeyCount = EEPROM.length() / 8 - 1; 
     if (maxKeyCount > 20) maxKeyCount = 20;
     if (EEPROM_key_count > maxKeyCount) EEPROM_key_count = 0;
+    analogReference(INTERNAL);
     refreshDisplay();
 }
 
@@ -256,6 +259,8 @@ void refreshDisplay()
         display.println();
     }
     display.setCursor(0,40);
-    display.print(F("V=5.0v"));
+    float Vin = (analogRead(batPit) * 1.1) / 1023 / 0.092;
+    display.print(F("V="));
+    display.print(Vin);
     display.display();
 }

@@ -38,6 +38,7 @@ void setup()
     button.setTickMode(AUTO);
     mode = read; // TODO: - save mode to EEPROM and read it on start
     Serial.begin(115200); // For debug
+    refreshDisplay();
 }
 
 void loop()
@@ -65,6 +66,7 @@ void readButton()
             mode = read;
             break;
         }
+        refreshDisplay();
     }
     // Double tap -> Next key from EEPROM
     if (button.isDouble()) nextKey();
@@ -72,7 +74,7 @@ void readButton()
     if (button.isTriple()) prevKey();
     // Hold key -> Save key from buffer to EEPROM
     if (button.isHold()) saveKey();
-    refreshDisplay();
+    
 }
 
 void action()
@@ -101,14 +103,17 @@ void setupDisplay()
 
 void nextKey()
 {
+    refreshDisplay();
 }
 
 void prevKey()
 {
+    refreshDisplay();
 }
 
 void saveKey()
 {
+    refreshDisplay();
 }
 
 void writeAction() 

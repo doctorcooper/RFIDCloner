@@ -1,5 +1,4 @@
 #include "RFID125.h"
-#include "MyDelays.h"
 #include <Arduino.h>
 
 byte rfidData[5];                                               // Number on the key

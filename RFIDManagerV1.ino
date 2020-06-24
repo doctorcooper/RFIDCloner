@@ -3,9 +3,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <GyverButton.h>
-#include <EEPROM.h>
 #include "RFID125.h"
 #include "Strings.h"
+#include "EEPROMHelper.h"
 
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
@@ -29,15 +29,21 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LC
 unsigned long actionTimeStamp = millis();
 unsigned long writeTimeStamp = millis();
 byte writeStatus;
+boolean isReadedKey = false;
 
 enum Mode { read, write, emulator } mode;
 
 void setup()
 {
-    setupDisplay();
     button.setTickMode(AUTO);
     mode = read; // TODO: - save mode to EEPROM and read it on start
+    setupDisplay(); 
     Serial.begin(115200); // For debug
+
+    EEPROM_key_count = EEPROM[0];
+    maxKeyCount = EEPROM.length() / 8 - 1; 
+    if (maxKeyCount > 20) maxKeyCount = 20;
+    if (EEPROM_key_count > maxKeyCount) EEPROM_key_count = 0;
     refreshDisplay();
 }
 
@@ -74,7 +80,18 @@ void readButton()
     if (button.isTriple()) prevKey();
     // Hold key -> Save key from buffer to EEPROM
     if (button.isHold()) saveKey();
-    
+
+    // if (button.hasClicks()) {
+    //     if (button.getClicks() == 7) {
+    //         Serial.println(F("EEPROM cleared"));
+    //         EEPROM.update(0, 0); 
+    //         EEPROM.update(1, 0);
+    //         EEPROM_key_count = 0; 
+    //         EEPROM_key_index = 0;
+    //     }
+    //     isReadedKey = false;
+    // }
+
 }
 
 void action()
@@ -82,7 +99,11 @@ void action()
     switch (mode)
     {
     case read:
-        if (searchRFID(true)) refreshDisplay();
+        if (searchRFID(true)) 
+        {
+            isReadedKey = true;
+            refreshDisplay();
+        }
         break;
     case write: 
         writeAction();
@@ -102,17 +123,35 @@ void setupDisplay()
 }
 
 void nextKey()
-{
+{    
+    if (EEPROM_key_count > 0) {
+        EEPROM_key_index++;
+        if (EEPROM_key_index > EEPROM_key_count) EEPROM_key_index = 1;
+        EEPROM_get_key(EEPROM_key_index, keyID);
+        EEPROM.update(1, EEPROM_key_index);
+    }
+    isReadedKey = false;
     refreshDisplay();
 }
 
 void prevKey()
 {
+    
+    if (EEPROM_key_count > 0) {
+        EEPROM_key_index--;
+        if (EEPROM_key_index < 1) EEPROM_key_index = EEPROM_key_count;
+        EEPROM_get_key(EEPROM_key_index, keyID);
+        EEPROM.update(1, EEPROM_key_index);
+    }
+    isReadedKey = false;
     refreshDisplay();
 }
 
 void saveKey()
 {
+    EEPROM_AddKey(keyID);
+    delay(1000);
+    isReadedKey = false;
     refreshDisplay();
 }
 
@@ -152,19 +191,41 @@ void refreshDisplay()
 
     display.println();
 
-    for (byte i = 0; i < strlen_P(key_txt); i++)
+    if (isReadedKey) 
     {
-        display.print((char)pgm_read_byte(&key_txt[i]));
-    }
-    for (byte i = 0; i < 8; i++)
-    {
-        display.print(keyID[i], HEX);
-        if (i != 7) display.print(":");
+        for (byte i = 0; i < strlen_P(key_txt); i++)
+        {
+           display.print((char)pgm_read_byte(&key_txt[i]));
+        }
+        for (byte i = 0; i < 8; i++)
+        {
+            display.print(keyID[i], HEX);
+            if (i != 7) display.print(F(":"));
+        }
+    } else if (EEPROM_key_count != 0) {
+        EEPROM_key_index = EEPROM[1];
+        EEPROM_get_key(EEPROM_key_index, keyID);
+        display.print(F("["));
+        display.print(EEPROM_key_index);
+        display.print(F("of"));
+        display.print(EEPROM_key_count);
+        display.print(F("]"));
+        for (byte i = 0; i < 8; i++)
+        {
+            display.print(keyID[i], HEX);
+            if (i != 7) display.print(F(":"));
+        }
+    } else {
+        for (byte i = 0; i < strlen_P(noKeys_txt); i++)
+        {
+           display.print((char)pgm_read_byte(&noKeys_txt[i]));
+        }
     }
 
     display.println();
 
-    if (mode == write) {
+    if (mode == write) 
+    {
         switch (writeStatus)
         {
         case 1:
@@ -194,6 +255,7 @@ void refreshDisplay()
         }
         display.println();
     }
-
+    display.setCursor(0,40);
+    display.print(F("V=5.0v"));
     display.display();
 }

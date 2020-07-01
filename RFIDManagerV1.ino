@@ -60,41 +60,51 @@ void loop()
 
 void readButton()
 {
-    // Single tap -> Change mode
-    if (button.isSingle())
-    {
-        switch (mode)
-        {
-        case read: 
-            mode = write;
-            break;
-        case write:
-            mode = emulator;
-            break;
-        case emulator:
-            mode = read;
-            break;
-        }
-        refreshDisplay();
-    }
-    // Double tap -> Next key from EEPROM
-    if (button.isDouble()) nextKey();
-    // Triple tap -> Previous key from EEPROM
-    if (button.isTriple()) prevKey();
-    // Hold key -> Save key from buffer to EEPROM
+    // Hold key -- Save key to EEPROM
     if (button.isHold()) saveKey();
 
-    // if (button.hasClicks()) {
-    //     if (button.getClicks() == 7) {
-    //         Serial.println(F("EEPROM cleared"));
-    //         EEPROM.update(0, 0); 
-    //         EEPROM.update(1, 0);
-    //         EEPROM_key_count = 0; 
-    //         EEPROM_key_index = 0;
-    //     }
-    //     isReadedKey = false;
-    // }
-
+    if (button.hasClicks()) 
+    {
+        switch (button.getClicks())
+        {
+        // Single tap -> Change mode
+        case 1:
+            switch (mode)
+            {
+            case read: 
+               mode = write;
+                break;
+            case write:
+                mode = emulator;
+                break;
+             case emulator:
+                mode = read;
+                break;
+            }
+            refreshDisplay();
+            break;
+        // Double tap -> Next key from EEPROM
+        case 2:
+            nextKey();
+            break;
+        // Triple tap -> Previous key from EEPROM
+        case 3:
+            prevKey();
+            break;
+        // Seven tap -- Clear EEPROM
+        case 7:
+            EEPROM.update(0, 0); 
+            EEPROM.update(1, 0);
+            EEPROM_key_count = 0; 
+            EEPROM_key_index = 0;
+            isReadedKey = false;
+            refreshDisplay();
+            break;
+        
+        default:
+            break;
+        }
+    }
 }
 
 void action()
@@ -119,7 +129,7 @@ void action()
 void setupDisplay()
 {
     display.begin();
-    display.setContrast(27);
+    display.setContrast(40);
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(BLACK);
@@ -210,7 +220,7 @@ void refreshDisplay()
         EEPROM_get_key(EEPROM_key_index, keyID);
         display.print(F("["));
         display.print(EEPROM_key_index);
-        display.print(F("of"));
+        display.print(F(":"));
         display.print(EEPROM_key_count);
         display.print(F("]"));
         for (byte i = 0; i < 8; i++)

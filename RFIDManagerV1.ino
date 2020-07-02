@@ -10,11 +10,11 @@
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
 
-#define LCD_CLK A4
-#define LCD_DIN A3
+#define LCD_CLK A0
+#define LCD_DIN A1
 #define LCD_DC A2
-#define LCD_CE A1
-#define LCD_RST A0
+#define LCD_CE A3
+#define LCD_RST A4
 
 // Sensor button
 #define BUTTON_PIN 10
@@ -129,7 +129,7 @@ void action()
 void setupDisplay()
 {
     display.begin();
-    display.setContrast(40);
+    display.setContrast(50);
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(BLACK);

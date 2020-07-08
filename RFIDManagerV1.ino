@@ -17,7 +17,7 @@
 #define LCD_RST A4
 
 // Sensor button
-#define BUTTON_PIN 10
+#define BUTTON_PIN 13
 
 #define delayAction 800
 #define delayWrite 1000
@@ -25,7 +25,7 @@
 #define batPit A7
 
 //-------------------- Objects init --------------------
-GButton button(BUTTON_PIN);
+GButton button(BUTTON_PIN, LOW_PULL, NORM_OPEN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
 unsigned long actionTimeStamp = millis();
@@ -269,7 +269,7 @@ void refreshDisplay()
         display.println();
     }
     display.setCursor(0,40);
-    float Vin = (analogRead(batPit) * 1.1) / 1023 / 0.092;
+    float Vin = (analogRead(batPit) * 1.1) / 1023 / 0.094;
     display.print(F("V="));
     display.print(Vin);
     display.display();

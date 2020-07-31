@@ -1,9 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-const char readMode_txt[] PROGMEM = "Read mode";
-const char writeMode_txt[] PROGMEM = "Write mode";
-const char emulatorMode_txt[] PROGMEM = "Emulator mode";
 const char key_txt[] PROGMEM = "Key:";
 const char writeOK_txt[] PROGMEM = "Write success!";
 const char writeFailed_txt[] PROGMEM = "Write failed!";

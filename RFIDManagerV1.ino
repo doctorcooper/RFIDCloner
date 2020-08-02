@@ -42,7 +42,7 @@ enum Mode {                                     // Modes
 
 ISR (TIMER0_COMPA_vect) {                       // Timer0 interrupt 
     timerMills++;                               // Increment counter
-    if (timerMills - timerTimestamp >= 20) {    // If less more 20ms -> read button
+    if (timerMills - timerTimestamp >= 10) {    // If less more 20ms -> read button
         timerTimestamp = timerMills;
         button.tick();
     }
@@ -56,7 +56,7 @@ ISR (TIMER0_COMPA_vect) {                       // Timer0 interrupt
 void setup() {
                                                 // TIMER0 Setup
     bitSet(TCCR0A, WGM01);                      // Reset on compare
-    OCR0A = 0xF9;                               // Begin count on overflow
+    OCR0A = 249;                                // Begin count on overflow
     bitSet(TIMSK0, OCIE0A);                     // Enable interrupt if compare with register A
     bitSet(TCCR0B, CS01);                       // Set clock divider on 64
     bitSet(TCCR0B, CS00);
@@ -64,7 +64,7 @@ void setup() {
 
     mode = read;                                // Select start mode
     
-    Serial.begin(115200);                    // For debug
+    Serial.begin(115200);                       // For debug
                                                 // EEPROM Setup
     EEPROM_key_count = EEPROM[0];               // Get count of keys 
     maxKeyCount = EEPROM.length() / 8 - 1;      // Get maximun count of keys
@@ -106,6 +106,8 @@ void readButton() {
                 mode = read;
                 break;
             }
+            test1();
+            test2();
             break;
         case 2:                                 // Double tap -> Next key from EEPROM
             nextKey();

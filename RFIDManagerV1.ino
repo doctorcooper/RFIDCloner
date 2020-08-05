@@ -3,9 +3,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <GyverButton.h>
-#include "RFID125.h"
+// #include "RFID125.h"
 #include "Strings.h"
 #include "EEPROMHelper.h"
+#include "RFID-TAG-125kHz.h"
 
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
@@ -26,6 +27,7 @@
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN, LOW_PULL, NORM_OPEN);
 Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
+RFID_TAG reader = RFID_TAG(2);
 
 uint32_t actionTimeStamp;                       // Timestamp on action
 uint32_t writeTimeStamp;                        // Timestamp on write
@@ -40,9 +42,11 @@ enum Mode {                                     // Modes
     read, write, emulator 
 } mode;
 
+uint8_t keyUID[8];
+
 ISR (TIMER0_COMPA_vect) {                       // Timer0 interrupt 
     timerMills++;                               // Increment counter
-    if (timerMills - timerTimestamp >= 10) {    // If less more 20ms -> read button
+    if (timerMills - timerTimestamp >= 10) {    // If less more 10ms -> read button
         timerTimestamp = timerMills;
         button.tick();
     }
@@ -106,8 +110,6 @@ void readButton() {
                 mode = read;
                 break;
             }
-            test1();
-            test2();
             break;
         case 2:                                 // Double tap -> Next key from EEPROM
             nextKey();
@@ -131,7 +133,8 @@ void readButton() {
 void action() {                                 // Do action
     switch (mode) {
     case read:
-        if (searchRFID(true)) {
+        if (reader.searchTag(true)) {
+            reader.getUID(keyUID);
             hasReadKey = true;
         }
         break;
@@ -139,7 +142,7 @@ void action() {                                 // Do action
         writeAction();
         break;
     case emulator: 
-        sendEM_Marine(keyID);
+        // sendEM_Marine(keyID);
         break;
     }
 }
@@ -158,7 +161,7 @@ void nextKey() {                                // Next key handling tapped
         if (EEPROM_key_index > EEPROM_key_count) { 
             EEPROM_key_index = 1; 
         }
-        EEPROM_get_key(EEPROM_key_index, keyID);
+        EEPROM_get_key(EEPROM_key_index, keyUID);
         EEPROM.update(1, EEPROM_key_index);
     }
     hasReadKey = false;
@@ -170,21 +173,21 @@ void prevKey() {                                // Previous key handling tapped
         if (EEPROM_key_index < 1) { 
             EEPROM_key_index = EEPROM_key_count; 
         }
-        EEPROM_get_key(EEPROM_key_index, keyID);
+        EEPROM_get_key(EEPROM_key_index, keyUID);
         EEPROM.update(1, EEPROM_key_index);
     }
     hasReadKey = false;
 }
 
 void saveKey() {                                // Save key handling
-    EEPROM_AddKey(keyID);
+    EEPROM_AddKey(keyUID);
     hasReadKey = false;
 }
 
 void writeAction() {
     if (millis() - writeTimeStamp < delayWrite) { return; }
     writeTimeStamp = millis();
-    writeStatus = write2rfid();
+    writeStatus = reader.writeTag(keyUID);
 }
 
 void refreshDisplay() {
@@ -194,21 +197,21 @@ void refreshDisplay() {
         for (byte i = 0; i < strlen_P(key_txt); i++) {
            display.print((char)pgm_read_byte(&key_txt[i]));
         }
-        for (byte i = 0; i < 8; i++) {
-            display.print(keyID[i], HEX);
-            if (i != 7) { display.print(F(":")); }
+        for (byte i = 0; i < 5; i++) {
+            display.print(keyUID[i], HEX);
+            if (i != 5) { display.print(F(":")); }
         }
     } else if (EEPROM_key_count != 0) {
         EEPROM_key_index = EEPROM[1];
-        EEPROM_get_key(EEPROM_key_index, keyID);
+        EEPROM_get_key(EEPROM_key_index, keyUID);
         display.print(F("["));
         display.print(EEPROM_key_index);
         display.print(F(":"));
         display.print(EEPROM_key_count);
         display.print(F("]"));
-        for (byte i = 0; i < 8; i++) {
-            display.print(keyID[i], HEX);
-            if (i != 7) { display.print(F(":")); }
+        for (byte i = 0; i < 5; i++) {
+            display.print(keyUID[i], HEX);
+            if (i != 5) { display.print(F(":")); }
         }
     } else {
         for (byte i = 0; i < strlen_P(noKeys_txt); i++) {

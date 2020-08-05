@@ -168,7 +168,7 @@ bool T5557_blockRead(byte* buffer) {
         }     
         if (i > 0) {                                            // начиная с 1-го бита пишем в буфер
             if (ti) {
-             bitSet(buffer[(i - 1) >> 3], 7 - j);
+                bitSet(buffer[(i - 1) >> 3], 7 - j);
             } else {
                 bitClear(buffer[(i - 1) >> 3], 7 - j);
             }
@@ -276,9 +276,9 @@ void sendEM_Marine(byte *buffer) {                              // send key (Tes
     }
 }
 
-uint8_t checkParity(uint8_t byte, uint8_t length = 8) {
+uint8_t checkParity(uint8_t byte) {
     uint8_t par = 0;
-    for (uint8_t i = 0; i < length; i++ ) {
+    for (uint8_t i = 0; i < 8; i++ ) {
         par ^= ((byte >> i) & 1);
     }
     return par;
@@ -302,9 +302,9 @@ void getUID(uint8_t *rawData, uint8_t *uid) {
     uid[4] = (0b01111000 & rawData[6]) << 1 | (0b11 & rawData[6]) << 2 | rawData[7] >> 6;
 }
 
-void getRawData(uint8_t *rawData, uint8_t *uid) {
+void getRawData(uint8_t *uid, uint8_t *rawData) {
     rawData[0] = 0b11111111;
-    rawData[1] = 0b1 << 7 | (uid[0] & 0b11110000) >> 1 | checkParity((uid[0] & 0b11110000)) << 2 | (uid[0] & 0b00001100) >> 2;
+    rawData[1] = 0b10000000 | (uid[0] & 0b11110000) >> 1 | checkParity((uid[0] & 0b11110000)) << 2 | (uid[0] & 0b00001100) >> 2;
     rawData[2] = (uid[0] & 0b00000011) << 6 | checkParity(uid[0] & 0b00001111) << 5 | (uid[1] & 0b11110000) >> 3 | checkParity(uid[1] & 0b11110000);
     rawData[3] = (uid[1] & 0b00001111) << 4 | checkParity(uid[1] & 0b00001111) << 3 | (uid[2] & 0b11100000) >> 5;
     rawData[4] = (uid[2] & 0b00010000) << 3 | checkParity(uid[2] & 0b11110000) << 6 | (uid[2] & 0b00001111) << 2 | checkParity(uid[2] & 0b00001111) << 1 | (uid[3] & 0b10000000) >> 7;
@@ -313,61 +313,11 @@ void getRawData(uint8_t *rawData, uint8_t *uid) {
     rawData[7] = (uid[4] & 0b00000011) << 6 | checkParity(uid[4] & 0b00001111) << 5;
 
     uint8_t col = 0;
-    /*
     for (uint8_t i = 0; i < 4; i++) {
-        col = 
-    
-    col = 0;
-    col = (uid[0] & 0b10000000) >> (4 - i) | (uid[0] & 0b00001000) >> 1 | (uid[1] & 0b10000000) >> 6 | (uid[1] & 0b00001000) >> 3; 
-    col = checkParity(col) << 7;
-    col |= (uid[2] & 0b10000000) >> 4 | (uid[2] & 0b00001000) >> 1 | (uid[3] & 0b10000000) >> 6 | (uid[3] & 0b00001000) >> 3;
-    col = checkParity(col) << 7;
-    col |= (uid[4] & 0b10000000) >> 6 | (uid[4] & 0b00001000) >> 3;
-    col = checkParity(col);
-    rawData[7] |= col << 4;
-    
+        col = 0;
+        for (uint8_t j = 0; j < 5; j++) {
+            col ^= (uid[j] & (0b10000000 >> i) >> (7 - i)) ^ (uid[j] & (0b00001000 >> i) >> (3 - i));
+        }
+        rawData[7] |= col << 4 - i;
     }
-    */
-    
-    col = (uid[0] & 0b10000000) << 0 | (uid[0] & 0b00001000) << 3 | (uid[1] & 0b10000000) >> 2 | (uid[1] & 0b00001000) << 1 | (uid[2] & 0b10000000) >> 4 | (uid[2] & 0b00001000) >> 1 | (uid[3] & 0b10000000) >> 6 | (uid[3] & 0b00001000) >> 3;
-    col = checkParity(col) << 7;
-    col |= (uid[4] & 0b10000000) >> 6 | (uid[4] & 0b00001000) >> 3;
-    col = checkParity(col);
-    rawData[7] |= col << 4;
-
-    col = 0;
-    col = (uid[0] & 0b01000000) << 1 | (uid[0] & 0b00000100) << 4 | (uid[1] & 0b01000000) >> 1 | (uid[1] & 0b00000100) << 2 | (uid[2] & 0b01000000) >> 3 | (uid[2] & 0b00000100) >> 0 | (uid[3] & 0b01000000) >> 5 | (uid[3] & 0b00000100) >> 2;
-    col = checkParity(col) << 7;
-    col |= (uid[4] & 0b01000000) >> 5 | (uid[4] & 0b00000100) >> 2;
-    col = checkParity(col);
-    rawData[7] |= col << 3;
-
-    col = 0;
-    col = (uid[0] & 0b00100000) << 2 | (uid[0] & 0b00000010) << 5 | (uid[1] & 0b00100000) >> 0 | (uid[1] & 0b00000010) << 3 | (uid[2] & 0b00100000) >> 2 | (uid[2] & 0b00000010) << 1 | (uid[3] & 0b00100000) >> 4 | (uid[3] & 0b00000010) >> 1;
-    col = checkParity(col) << 7;
-    col |= (uid[4] & 0b00100000) >> 4 | (uid[4] & 0b00000010) >> 1;
-    col = checkParity(col);
-    rawData[7] |= col << 2;
-
-    col = 0;
-    col = (uid[0] & 0b00010000) << 3 | (uid[0] & 0b00000001) << 6 | (uid[1] & 0b00010000) << 1 | (uid[1] & 0b00000001) << 4 | (uid[2] & 0b00010000) >> 1 | (uid[2] & 0b00000001) << 2 | (uid[3] & 0b00010000) >> 3 | (uid[3] & 0b00000001) >> 0;
-    col = checkParity(col) << 7;
-    col |= (uid[4] & 0b00010000) >> 3 | (uid[4] & 0b00000001) >> 0;
-    col = checkParity(col);
-    rawData[7] |= col << 1;
-}
-
-void test1() {
-    uint8_t kek[5];
-    printByteArray(keyID, 8);
-    getUID(keyID, kek);
-    printByteArray(kek, 5);
-}
-
-void test2() {
-    uint8_t kek[5];
-    uint8_t ses[8];
-    getUID(keyID, kek);
-    getRawData(ses, kek);
-    printByteArray(ses, 8);
 }

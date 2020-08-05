@@ -10,6 +10,7 @@ public:
     bool searchTag(bool copyKey);                       // Action for reading tag
     uint8_t writeTag(uint8_t *uid);
     void getUID(uint8_t *keyUID);                       // Get UID Tag
+    void emulateKey(uint8_t *keyUID);
 private:
     uint8_t checkParity(uint8_t byte);                  // Get parity bit
     void getUID(uint8_t *rawData, uint8_t *uid);        // Get UID Tag from raw data
@@ -28,13 +29,10 @@ private:
     bool checkWriteState();
     bool write2rfidT5557(uint8_t *buffer);
     
-    const int16_t BITRATE = 2;                          // kBps
     const uint8_t GENERATOR_PIN = 11;                   // Emulator PIN
 
     uint8_t _uid[5];                                    // UID
     uint8_t _keyBuffer[8];                              // Buffer for raw data
 
     uint8_t _pwmDivider;                             // Multiplier for PWM (1 == 16MHz, 2 == 8MHz)
-
-    void debugPrintByteArray(uint8_t *array, uint8_t count);
 };

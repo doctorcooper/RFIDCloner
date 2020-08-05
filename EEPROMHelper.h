@@ -8,19 +8,19 @@ byte EEPROM_key_index = 0;                  // 1..EEPROM_key_count номер п
 
 bool isKeyEmpty(byte buffer[]) {
     byte result = 0;
-    for (byte i = 0; i < 8; i++) {
+    for (byte i = 0; i < 5; i++) {
         result += buffer[i];
     }
     return (result == 0);
 }
 
 byte indexKeyInROM(byte buffer[]) {         // возвращает индекс или ноль если нет в ROM 
-    byte buffer1[8]; 
+    byte buffer1[5]; 
     bool eq = true;
     for (byte j = 1; j <= EEPROM_key_count; j++)
     {  // ищем ключ в eeprom. 
         EEPROM.get(j * sizeof(buffer1), buffer1);
-        for (byte i = 0; i < 8; i++) {
+        for (byte i = 0; i < 5; i++) {
             if (buffer1[i] != buffer[i]) { 
                 eq = false;
                 break; 
@@ -36,7 +36,7 @@ bool EEPROM_AddKey(byte buffer[]) {
 
     if (isKeyEmpty(buffer)) { return false; }
 
-    byte buffer1[8]; 
+    byte buffer1[5]; 
     byte index = indexKeyInROM(buffer);
               
     if (index != 0) { // ищем ключ в eeprom. Если находим, то не делаем запись, а индекс переводим в него 
@@ -55,7 +55,7 @@ bool EEPROM_AddKey(byte buffer[]) {
         }
     if (EEPROM_key_index > EEPROM_key_count) { EEPROM_key_index = 1; }
     // Serial.println(F("Adding to EEPROM"));
-    for (byte i = 0; i < 8; i++)  {
+    for (byte i = 0; i < 5; i++)  {
         buffer1[i] = buffer[i];
         // Serial.print(buffer[i], HEX); Serial.print(F(":"));  
     }
@@ -66,10 +66,10 @@ bool EEPROM_AddKey(byte buffer[]) {
     return true;
 }
 
-void EEPROM_get_key(byte EEPROM_key_index1, byte buffer[8]) {
-  byte buffer1[8];
+void EEPROM_get_key(byte EEPROM_key_index1, byte buffer[5]) {
+  byte buffer1[5];
   int address = EEPROM_key_index1 * sizeof(buffer1);
   if (address > EEPROM.length()) { return; }
   EEPROM.get(address, buffer1);
-  for (byte i = 0; i < 8; i++) { buffer[i] = buffer1[i]; }
+  for (byte i = 0; i < 5; i++) { buffer[i] = buffer1[i]; }
 }

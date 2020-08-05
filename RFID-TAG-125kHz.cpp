@@ -1,18 +1,10 @@
 #include "RFID-TAG-125kHz.h"
 #include <Arduino.h>
 
+#define BITRATE 2                         // kBps
+
 RFID_TAG::RFID_TAG(uint8_t divider) {
     _pwmDivider = divider;
-}
-
-void RFID_TAG::debugPrintByteArray(uint8_t *array, uint8_t count) {
-    for (uint8_t i = 0; i < count; i++) {
-        Serial.print(array[i], HEX);
-        if (i != (count - 1)) {
-            Serial.print(F(":"));
-        }
-    }
-    Serial.println();
 }
 
 uint8_t RFID_TAG::checkParity(uint8_t byte) {
@@ -97,8 +89,8 @@ void RFID_TAG::setAC(bool state) {                                            //
         pinMode(GENERATOR_PIN, OUTPUT);
         TCCR2A = bit(COM2A0) | bit(COM2B1) | bit(WGM21) | bit(WGM20); // Включаем режим Toggle on Compare Match на COM2A (pin 11) и счет таймера2 до OCR2A
         TCCR2B = bit(WGM22) | bit(CS20);                            // Задаем делитель для таймера2 = 1 (16 мГц)
-        OCR2A = 31;//63 / _pwmDivider;                                // 63 тактов на период. Частота на COM2A (pin 11) 16000/64/2 = 125 кГц, Скважнось COM2A в этом режиме всегда 50%
-        OCR2B = 15;//31 / _pwmDivider;                                // Скважность COM2B 32/64 = 50%  Частота на COM2A (pin 3) 16000/64 = 250 кГц //31 15???
+        OCR2A = 63 / _pwmDivider;                                // 63 тактов на период. Частота на COM2A (pin 11) 16000/64/2 = 125 кГц, Скважнось COM2A в этом режиме всегда 50%
+        OCR2B = 31 / _pwmDivider;                                // Скважность COM2B 32/64 = 50%  Частота на COM2A (pin 3) 16000/64 = 250 кГц //31 15???
         bitClear(ADCSRB, ACME);                                     // отключаем мультиплексор AC
         bitClear(ACSR, ACBG);                                       // отключаем от входа Ain0 1.1V
     } else {
@@ -162,12 +154,11 @@ bool RFID_TAG::readRFIDTag(uint8_t *buffer) {
     }
     if (ti == 2) { 
         return false;                                           // timeout
-    }                               
+    }                           
     return columnParityCheck(buffer);
 }
 
 bool RFID_TAG::searchTag(bool copyKey = true) {
-    Serial.println("Reading");
     setAC(true);                                                // включаем генератор 125кГц и компаратор
     delay(6);                                                   // переходные процессы детектора
     if (!readRFIDTag(_keyBuffer)) {
@@ -176,7 +167,6 @@ bool RFID_TAG::searchTag(bool copyKey = true) {
         }
         return false;
     } else {
-        debugPrintByteArray(_keyBuffer, 8);
         if (copyKey) {
             getUID(_keyBuffer, _uid);
 
@@ -283,10 +273,12 @@ uint8_t RFID_TAG::writeTag(uint8_t *uid) {
     uint8_t rawKey[8];
     getRawData(uid, rawKey);
     if (searchTag(false)) {
-        for (byte i = 0; i < 8; i++)
+        for (byte i = 0; i < 8; i++) {
             if (_keyBuffer[i] != rawKey[i]) {                          // сравниваем код для записи с тем, что уже записано в ключе.
                 return 3;                                       // если коды совпадают, ничего писать не нужно                                                 
-            }                                                     // Error - same key                            
+            }   
+        }
+                                                              // Error - same key                            
     }
     if (checkWriteState()) {
         if (write2rfidT5557(rawKey)) { 
@@ -296,6 +288,29 @@ uint8_t RFID_TAG::writeTag(uint8_t *uid) {
         }                                                                    
     } else {
         return 0;                                               // Idle
+    }                                                     
+}
+
+void RFID_TAG::emulateKey(uint8_t *keyUID) {                              // send key (Test version)
+    getRawData(keyUID, _keyBuffer);
+    setAC(false);                                   
+    bitClear(PORTB, 3);
+    delay(20);
+    for (byte k = 0; k < 10; k++) {
+        for (byte i = 0; i < 8; i++) {
+            for (byte j = 0; j < 8; j++) {
+                if (1 & (_keyBuffer[i] >> (7 - j))) {
+                    bitSet(DDRB, 3);
+                    delayMicroseconds(250);
+                    bitClear(DDRB, 3);
+                    delayMicroseconds(250);
+                } else {
+                    bitClear(DDRB, 3);
+                    delayMicroseconds(250);
+                    bitSet(DDRB, 3);
+                    delayMicroseconds(250);
+                }
+            }
+        }
     }
-                                                       
 }

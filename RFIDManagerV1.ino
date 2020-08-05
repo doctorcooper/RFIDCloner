@@ -3,7 +3,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <GyverButton.h>
-// #include "RFID125.h"
 #include "Strings.h"
 #include "EEPROMHelper.h"
 #include "RFID-TAG-125kHz.h"
@@ -68,10 +67,10 @@ void setup() {
 
     mode = read;                                // Select start mode
     
-    Serial.begin(115200);                       // For debug
+    // Serial.begin(115200);                       // For debug
                                                 // EEPROM Setup
     EEPROM_key_count = EEPROM[0];               // Get count of keys 
-    maxKeyCount = EEPROM.length() / 8 - 1;      // Get maximun count of keys
+    maxKeyCount = EEPROM.length() / 5 - 1;      // Get maximun count of keys
     if (maxKeyCount > 20) {                     // It doesn't be over 20
         maxKeyCount = 20;
     } 
@@ -142,7 +141,7 @@ void action() {                                 // Do action
         writeAction();
         break;
     case emulator: 
-        // sendEM_Marine(keyID);
+        reader.emulateKey(keyUID);
         break;
     }
 }
@@ -199,7 +198,7 @@ void refreshDisplay() {
         }
         for (byte i = 0; i < 5; i++) {
             display.print(keyUID[i], HEX);
-            if (i != 5) { display.print(F(":")); }
+            if (i != 4) { display.print(F(":")); }
         }
     } else if (EEPROM_key_count != 0) {
         EEPROM_key_index = EEPROM[1];
@@ -211,7 +210,7 @@ void refreshDisplay() {
         display.print(F("]"));
         for (byte i = 0; i < 5; i++) {
             display.print(keyUID[i], HEX);
-            if (i != 5) { display.print(F(":")); }
+            if (i != 4) { display.print(F(":")); }
         }
     } else {
         for (byte i = 0; i < strlen_P(noKeys_txt); i++) {

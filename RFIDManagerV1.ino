@@ -18,7 +18,7 @@
 
 #define BUTTON_PIN 13                           // Sensor button
 
-#define delayAction 800                         // Delay between actions
+#define delayAction 100                         // Delay between actions
 #define delayWrite 1000                         // Delay between writtings
 
 #define batPit A7                               // Pin for voltage monitoring
@@ -69,14 +69,7 @@ void setup() {
     
     // Serial.begin(115200);                       // For debug
                                                 // EEPROM Setup
-    EEPROM_key_count = EEPROM[0];               // Get count of keys 
-    maxKeyCount = EEPROM.length() / 5 - 1;      // Get maximun count of keys
-    if (maxKeyCount > 20) {                     // It doesn't be over 20
-        maxKeyCount = 20;
-    } 
-    if (EEPROM_key_count > maxKeyCount) {       //
-        EEPROM_key_count = 0;
-    }
+    setupEEPROM();
 
     analogReference(INTERNAL);                  // Initialise internal reference for voltage monitor
 
@@ -193,25 +186,27 @@ void refreshDisplay() {
     display.clearDisplay();
     display.setCursor(0, 0);
     if (hasReadKey) {
-        for (byte i = 0; i < strlen_P(key_txt); i++) {
-           display.print((char)pgm_read_byte(&key_txt[i]));
-        }
         for (byte i = 0; i < 5; i++) {
             display.print(keyUID[i], HEX);
             if (i != 4) { display.print(F(":")); }
+        }
+        display.println();
+        for (byte i = 0; i < strlen_P(read_txt); i++) {
+           display.print((char)pgm_read_byte(&read_txt[i]));
         }
     } else if (EEPROM_key_count != 0) {
         EEPROM_key_index = EEPROM[1];
         EEPROM_get_key(EEPROM_key_index, keyUID);
-        display.print(F("["));
-        display.print(EEPROM_key_index);
-        display.print(F(":"));
-        display.print(EEPROM_key_count);
-        display.print(F("]"));
         for (byte i = 0; i < 5; i++) {
             display.print(keyUID[i], HEX);
             if (i != 4) { display.print(F(":")); }
         }
+        display.println();
+        display.print(F("EEPROM["));
+        display.print(EEPROM_key_index);
+        display.print(F("of"));
+        display.print(EEPROM_key_count);
+        display.print(F("]"));
     } else {
         for (byte i = 0; i < strlen_P(noKeys_txt); i++) {
            display.print((char)pgm_read_byte(&noKeys_txt[i]));

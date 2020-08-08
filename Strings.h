@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-const char key_txt[] PROGMEM = "Key:";
+const char read_txt[] PROGMEM = "Read";
 const char writeOK_txt[] PROGMEM = "Write success!";
 const char writeFailed_txt[] PROGMEM = "Write failed!";
 const char readyToWrite_txt[] PROGMEM = "Ready to write";

@@ -49,7 +49,7 @@ void RFID_TAG::getRawData(uint8_t *uid, uint8_t *rawData) {
     }
 }
 
-bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                              // Check on even cols with data
+bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                  // Check on even cols with data
     uint8_t k;
     k = 1 & buffer[1] >> 6 + 1 & buffer[1] >> 1 + 1 & buffer[2] >> 4 + 1 & buffer[3] >> 7 + 1 & buffer[3] >> 2 + 1 & buffer[4] >> 5 + 1 & buffer[4] + 1 & buffer[5] >> 3 + 1 & buffer[6] >> 6 + 1 & buffer[6] >> 1 + 1 & buffer[7] >> 4;
     if (k & 1)
@@ -68,29 +68,29 @@ bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                             
     return true;
 }
 
-byte RFID_TAG::ttAComp(unsigned long timeOut = 7000) {           // pulse 0 or 1 or -1 if timeout 
+byte RFID_TAG::ttAComp(unsigned long timeOut = 7000) {              // pulse 0 or 1 or -1 if timeout 
     byte AcompState, AcompInitState;
     uint32_t tEnd = micros() + timeOut;
-    AcompInitState = bitRead(ACSR, ACO);                                   // читаем флаг компаратора
+    AcompInitState = bitRead(ACSR, ACO);                            // читаем флаг компаратора
     do {
-        AcompState = bitRead(ACSR, ACO);                                   // читаем флаг компаратора
+        AcompState = bitRead(ACSR, ACO);                            // читаем флаг компаратора
         if (AcompState != AcompInitState) {
-            delayMicroseconds(1000 / (BITRATE * 4));        // 1/4 Period on 2 kBps = 125 mks
-            AcompState = bitRead(ACSR, ACO);                    // читаем флаг компаратора
-            delayMicroseconds(1000 / (BITRATE * 2));        // 1/2 Period on 2 kBps = 250 mks
+            delayMicroseconds(1000 / (BITRATE * 4));                // 1/4 Period on 2 kBps = 125 mks
+            AcompState = bitRead(ACSR, ACO);                        // читаем флаг компаратора
+            delayMicroseconds(1000 / (BITRATE * 2));                // 1/2 Period on 2 kBps = 250 mks
             return AcompState;
         }
     } while (micros() < tEnd);
-    return 2;                                                   // таймаут, компаратор не сменил состояние
+    return 2;                                                       // таймаут, компаратор не сменил состояние
 }
 
-void RFID_TAG::setAC(bool state) {                                            // включаем генератор 125кГц
+void RFID_TAG::setAC(bool state) {                                  // включаем генератор 125кГц
     if (state) {
         pinMode(GENERATOR_PIN, OUTPUT);
         TCCR2A = bit(COM2A0) | bit(COM2B1) | bit(WGM21) | bit(WGM20); // Включаем режим Toggle on Compare Match на COM2A (pin 11) и счет таймера2 до OCR2A
         TCCR2B = bit(WGM22) | bit(CS20);                            // Задаем делитель для таймера2 = 1 (16 мГц)
-        OCR2A = 63 / _pwmDivider;                                // 63 тактов на период. Частота на COM2A (pin 11) 16000/64/2 = 125 кГц, Скважнось COM2A в этом режиме всегда 50%
-        OCR2B = 31 / _pwmDivider;                                // Скважность COM2B 32/64 = 50%  Частота на COM2A (pin 3) 16000/64 = 250 кГц //31 15???
+        OCR2A = 63 / _pwmDivider;                                   // 63 тактов на период. Частота на COM2A (pin 11) 16000/64/2 = 125 кГц, Скважнось COM2A в этом режиме всегда 50%
+        OCR2B = 31 / _pwmDivider;                                   // Скважность COM2B 32/64 = 50%  Частота на COM2A (pin 3) 16000/64 = 250 кГц //31 15???
         bitClear(ADCSRB, ACME);                                     // отключаем мультиплексор AC
         bitClear(ACSR, ACBG);                                       // отключаем от входа Ain0 1.1V
     } else {
@@ -118,7 +118,7 @@ bool RFID_TAG::readRFIDTag(uint8_t *buffer) {
     uint8_t ti, j, k;
     j = 0;
     k = 0;
-    for (uint8_t i = 0; i < 64; i++) {                              // читаем 64 bit
+    for (uint8_t i = 0; i < 64; i++) {                          // читаем 64 bit
         ti = ttAComp();
         if (ti == 2) {
             break;                                              // timeout
@@ -274,12 +274,16 @@ uint8_t RFID_TAG::writeTag(uint8_t *uid) {
     getRawData(uid, rawKey);
     if (searchTag(false)) {
         for (byte i = 0; i < 8; i++) {
-            if (_keyBuffer[i] != rawKey[i]) {                          // сравниваем код для записи с тем, что уже записано в ключе.
-                return 3;                                       // если коды совпадают, ничего писать не нужно                                                 
+            if (_keyBuffer[i] != rawKey[i]) {  
+                check = false;                                  // сравниваем код для записи с тем, что уже записано в ключе.                                                                                         
+                break;                                          // если коды совпадают, ничего писать не нужно
             }   
-        }
-                                                              // Error - same key                            
+        }                                                                        
+        if (check) {
+            return 3;                                           // Error - same key
+        }                                                                   
     }
+    
     if (checkWriteState()) {
         if (write2rfidT5557(rawKey)) { 
             return 1;                                           // Write ok
@@ -291,26 +295,26 @@ uint8_t RFID_TAG::writeTag(uint8_t *uid) {
     }                                                     
 }
 
-void RFID_TAG::emulateKey(uint8_t *keyUID) {                              // send key (Test version)
+void RFID_TAG::emulateKey(uint8_t *keyUID) {                    // send key (Test version)
     getRawData(keyUID, _keyBuffer);
-    setAC(false);                                   
-    bitClear(PORTB, 3);
+    setAC(false);                 
+    digitalWrite(GENERATOR_PIN, LOW);
     delay(20);
     for (byte k = 0; k < 10; k++) {
         for (byte i = 0; i < 8; i++) {
             for (byte j = 0; j < 8; j++) {
                 if (1 & (_keyBuffer[i] >> (7 - j))) {
-                    bitSet(DDRB, 3);
+                    pinMode(GENERATOR_PIN, INPUT);
                     delayMicroseconds(250);
-                    bitClear(DDRB, 3);
+                    pinMode(GENERATOR_PIN, OUTPUT); 
                     delayMicroseconds(250);
                 } else {
-                    bitClear(DDRB, 3);
+                    pinMode(GENERATOR_PIN, OUTPUT);
                     delayMicroseconds(250);
-                    bitSet(DDRB, 3);
+                    pinMode(GENERATOR_PIN, INPUT);
                     delayMicroseconds(250);
                 }
             }
         }
-    }
+    }  
 }

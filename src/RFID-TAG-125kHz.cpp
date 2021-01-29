@@ -19,7 +19,7 @@ void RFID_TAG::getUID(uint8_t *rawData, uint8_t *uid) {
     uid[0] = (0b01111000 & rawData[1]) << 1 | (0b11 & rawData[1]) << 2 | rawData[2] >> 6;
     uid[1] = (0b00011110 & rawData[2]) << 3 | rawData[3] >> 4;
     uid[2] = rawData[3] << 5 | (0b10000000 & rawData[4]) >> 3 | (0b00111100 & rawData[4]) >> 2;
-    uid[3] = rawData[4] << 7 | (0b11100000 & rawData[5]) >> 1 | 0b1111 & rawData[5];
+    uid[3] = rawData[4] << 7 | (0b11100000 & rawData[5]) >> 1 | (0b1111 & rawData[5]);
     uid[4] = (0b01111000 & rawData[6]) << 1 | (0b11 & rawData[6]) << 2 | rawData[7] >> 6;
 }
 
@@ -45,22 +45,22 @@ void RFID_TAG::getRawData(uint8_t *uid, uint8_t *rawData) {
         for (uint8_t j = 0; j < 5; j++) {
             col ^= (uid[j] & (0b10000000 >> i) >> (7 - i)) ^ (uid[j] & (0b00001000 >> i) >> (3 - i));
         }
-        rawData[7] |= col << 4 - i;
+        rawData[7] |= (col << 4) - i;
     }
 }
 
 bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                  // Check on even cols with data
     uint8_t k;
-    k = 1 & buffer[1] >> 6 + 1 & buffer[1] >> 1 + 1 & buffer[2] >> 4 + 1 & buffer[3] >> 7 + 1 & buffer[3] >> 2 + 1 & buffer[4] >> 5 + 1 & buffer[4] + 1 & buffer[5] >> 3 + 1 & buffer[6] >> 6 + 1 & buffer[6] >> 1 + 1 & buffer[7] >> 4;
+    k = (1 & buffer[1] >> 6) + (1 & buffer[1] >> 1) + (1 & buffer[2] >> 4) + (1 & buffer[3] >> 7) + (1 & buffer[3] >> 2) + (1 & buffer[4] >> 5) + (1 & buffer[4]) + (1 & buffer[5] >> 3) + (1 & buffer[6] >> 6) + (1 & buffer[6] >> 1) + (1 & buffer[7] >> 4);
     if (k & 1)
         return false;
-    k = 1 & buffer[1] >> 5 + 1 & buffer[1] + 1 & buffer[2] >> 3 + 1 & buffer[3] >> 6 + 1 & buffer[3] >> 1 + 1 & buffer[4] >> 4 + 1 & buffer[5] >> 7 + 1 & buffer[5] >> 2 + 1 & buffer[6] >> 5 + 1 & buffer[6] + 1 & buffer[7] >> 3;
+    k = (1 & buffer[1] >> 5) + (1 & buffer[1]) + (1 & buffer[2] >> 3) + (1 & buffer[3] >> 6) + (1 & buffer[3] >> 1) + (1 & buffer[4] >> 4) + (1 & buffer[5] >> 7) + (1 & buffer[5] >> 2) + (1 & buffer[6] >> 5) + (1 & buffer[6]) + (1 & buffer[7] >> 3);
     if (k & 1)
         return false;
-    k = 1 & buffer[1] >> 4 + 1 & buffer[2] >> 7 + 1 & buffer[2] >> 2 + 1 & buffer[3] >> 5 + 1 & buffer[3] + 1 & buffer[4] >> 3 + 1 & buffer[5] >> 6 + 1 & buffer[5] >> 1 + 1 & buffer[6] >> 4 + 1 & buffer[7] >> 7 + 1 & buffer[7] >> 2;
+    k = (1 & buffer[1] >> 4) + (1 & buffer[2] >> 7) + (1 & buffer[2] >> 2) + (1 & buffer[3] >> 5) + (1 & buffer[3]) + (1 & buffer[4] >> 3) + (1 & buffer[5] >> 6) + (1 & buffer[5] >> 1) + (1 & buffer[6] >> 4) + (1 & buffer[7] >> 7) + (1 & buffer[7] >> 2);
     if (k & 1)
         return false;
-    k = 1 & buffer[1] >> 3 + 1 & buffer[2] >> 6 + 1 & buffer[2] >> 1 + 1 & buffer[3] >> 4 + 1 & buffer[4] >> 7 + 1 & buffer[4] >> 2 + 1 & buffer[5] >> 5 + 1 & buffer[5] + 1 & buffer[6] >> 3 + 1 & buffer[7] >> 6 + 1 & buffer[7] >> 1;
+    k = (1 & buffer[1] >> 3) + (1 & buffer[2] >> 6) + (1 & buffer[2] >> 1) + (1 & buffer[3] >> 4) + (1 & buffer[4] >> 7) + (1 & buffer[4] >> 2) + (1 & buffer[5] >> 5) + (1 & buffer[5]) + (1 & buffer[6] >> 3) + (1 & buffer[7] >> 6) + (1 & buffer[7] >> 1);
     if (k & 1)
         return false;
     if (1 & buffer[7])
@@ -195,9 +195,8 @@ bool RFID_TAG::sendOpT5557(uint8_t opCode, uint32_t password = 0, uint8_t lockBi
 }
 
 bool RFID_TAG::T5557_blockRead(uint8_t* buffer) {
-    uint8_t ti, j, k; 
+    uint8_t ti, j; 
     j = 0;
-    k = 0;
     for (uint8_t i = 0; i < 33; i++) {                                                             
         ti = ttAComp(2000);                                     // читаем стартовый 0 и 32 значащих bit
         if (ti == 2) { break; }                                 // timeout

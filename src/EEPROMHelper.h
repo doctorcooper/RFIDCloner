@@ -76,7 +76,7 @@ bool EEPROM_AddKey(byte buffer[]) {
 
 void EEPROM_get_key(byte EEPROM_key_index1, byte buffer[5]) {
     byte buffer1[5];
-    int address = EEPROM_key_index1 * sizeof(buffer1);
+    uint8_t address = EEPROM_key_index1 * sizeof(buffer1);
     if (address > EEPROM.length()) { return; }
     EEPROM.get(address, buffer1);
     for (byte i = 0; i < 5; i++) { 

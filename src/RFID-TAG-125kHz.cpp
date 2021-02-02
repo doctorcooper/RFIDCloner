@@ -24,7 +24,7 @@ void RFID_TAG::getUID(uint8_t *rawData, uint8_t *uid) {
 }
 
 void RFID_TAG::getUID(uint8_t *uid) {
-    for(uint8_t i = 0; i < 5; i++) {
+    for (uint8_t i = 0; i < 5; i++) {
         uid[i] = _uid[i];
     }    
 }

@@ -30,6 +30,7 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LC
 RFID_TAG reader = RFID_TAG(2);
 KeysStorage storage = KeysStorage();
 
+//-------------------- Variables -----------------------
 uint32_t actionTimeStamp;                       // Timestamp on action
 uint32_t writeTimeStamp;                        // Timestamp on write
 uint8_t writeStatus;                            // Write status ()
@@ -39,9 +40,7 @@ volatile uint32_t timerMills;                   // Counter mills for timer0
 int32_t timerTimestamp;                         // Timestamp on button reading
 int32_t displayTipestamp;                       // Timestamp on display refreshing
 
-enum Mode {                                     // Modes 
-    read, write, emulator 
-} mode;
+enum Mode { read, write, emulator } mode;       // Modes
 
 uint8_t keyUID[8];
 
@@ -60,9 +59,7 @@ void refreshDisplay() {
             if (i != 4) { display.print(F(":")); }
         }
         display.println();
-        for (byte i = 0; i < strlen_P(read_txt); i++) {
-           display.print((char)pgm_read_byte(&read_txt[i]));
-        }
+        printString(read_txt);
     } else if (storage.getKeyCount() != 0) {
         storage.getKeyByIndex(keyUID);
         for (byte i = 0; i < 5; i++) {
@@ -70,15 +67,13 @@ void refreshDisplay() {
             if (i != 4) { display.print(F(":")); }
         }
         display.println();
-        display.print(F("EEPROM["));
+        display.print(F("["));
         display.print(storage.getKeyIndex());
         display.print(F("of"));
         display.print(storage.getKeyCount());
         display.print(F("]"));
     } else {
-        for (byte i = 0; i < strlen_P(noKeys_txt); i++) {
-           display.print((char)pgm_read_byte(&noKeys_txt[i]));
-        }
+        printString(noKeys_txt);
     }
 
     display.println();
@@ -87,32 +82,27 @@ void refreshDisplay() {
     if (mode == write) {
         switch (writeStatus) {
         case 1:
-            for (byte i = 0; i < strlen_P(writeOK_txt); i++) {
-                display.print((char)pgm_read_byte(&writeOK_txt[i]));
-            }
+            printString(writeOK_txt);
             break;
         case 2: 
-            for (byte i = 0; i < strlen_P(writeFailed_txt); i++) {
-                display.print((char)pgm_read_byte(&writeFailed_txt[i]));
-            }
+            printString(writeFailed_txt);
             break;
         case 3:
-            for (byte i = 0; i < strlen_P(sameKey_txt); i++) {
-                display.print((char)pgm_read_byte(&sameKey_txt[i]));
-            }
+            printString(sameKey_txt);
             break;
         default:
-            for (byte i = 0; i < strlen_P(readyToWrite_txt); i++) {
-                display.print((char)pgm_read_byte(&readyToWrite_txt[i]));
-            }
+            printString(readyToWrite_txt);
             break;
         }
         display.println();
     }
+
+    /*
     display.setCursor(0,41);
     float Vin = (analogRead(batPit) * 1.1) / 1023 / 0.094;
     display.print(F("V="));
     display.print(Vin);
+    */
 
     display.setCursor(78,41);
     switch (mode) {
@@ -236,8 +226,10 @@ void setup() {
     mode = read;                                // Select start mode
     
     // Serial.begin(115200);                       // For debug
-                                               
+
+    /*                                           
     analogReference(INTERNAL);                  // Initialise internal reference for voltage monitor
+    */
 
     setupDisplay();                             // Setup display
     refreshDisplay();                           // Refresh info on display

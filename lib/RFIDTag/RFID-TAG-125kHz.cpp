@@ -68,7 +68,7 @@ bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                  // Check on
     return true;
 }
 
-byte RFID_TAG::ttAComp(unsigned long timeOut = 7000) {              // pulse 0 or 1 or -1 if timeout 
+uint8_t RFID_TAG::ttAComp(uint32_t timeOut) {              // pulse 0 or 1 or -1 if timeout 
     byte AcompState, AcompInitState;
     uint32_t tEnd = micros() + timeOut;
     AcompInitState = bitRead(ACSR, ACO);                            // читаем флаг компаратора

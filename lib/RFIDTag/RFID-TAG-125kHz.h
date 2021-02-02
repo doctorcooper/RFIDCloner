@@ -16,7 +16,7 @@ private:
     void getUID(uint8_t *rawData, uint8_t *uid);        // Get UID Tag from raw data
     void getRawData(uint8_t *uid, uint8_t *rawData);    // Get Raw data from UID
     bool columnParityCheck(uint8_t *buffer);            // Check parity bit from column of data
-    uint8_t ttAComp(uint32_t timeOut);                  // Read data from Analog Comparer
+    uint8_t ttAComp(uint32_t timeOut = 7000);                  // Read data from Analog Comparer
     bool readRFIDTag(uint8_t *buffer);                  // Read data from tag
     void setAC(bool state);                             // Control Analog Comparer //ac set on or TCCR...
 

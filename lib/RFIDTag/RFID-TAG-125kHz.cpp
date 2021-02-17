@@ -1,15 +1,15 @@
 #include "RFID-TAG-125kHz.h"
 #include <Arduino.h>
 
-#define BITRATE 2                         // kBps
-
+// Constructor (clock divider(1 == 16MHz, 2 == 8MHz))
 RFID_TAG::RFID_TAG(uint8_t divider) {
     _pwmDivider = divider;
 }
 
+// Working with data
 uint8_t RFID_TAG::checkParity(uint8_t byte) {
     uint8_t par = 0;
-    for (uint8_t i = 0; i < 8; i++ ) {
+    for (uint8_t i = 0; i < 8; i++) {
         par ^= ((byte >> i) & 1);
     }
     return par;
@@ -40,13 +40,42 @@ void RFID_TAG::getRawData(uint8_t *uid, uint8_t *rawData) {
     rawData[7] = (uid[4] & 0b00000011) << 6 | checkParity(uid[4] & 0b00001111) << 5;
 
     uint8_t col = 0;
+    /*
+    This is not work
     for (uint8_t i = 0; i < 4; i++) {
         col = 0;
         for (uint8_t j = 0; j < 5; j++) {
             col ^= (uid[j] & (0b10000000 >> i) >> (7 - i)) ^ (uid[j] & (0b00001000 >> i) >> (3 - i));
         }
-        rawData[7] |= (col << 4) - i;
+        rawData[7] |= col << (4 - i);
     }
+    */
+    col = (uid[0] & 0b10000000) << 0 | (uid[0] & 0b00001000) << 3 | (uid[1] & 0b10000000) >> 2 | (uid[1] & 0b00001000) << 1 | (uid[2] & 0b10000000) >> 4 | (uid[2] & 0b00001000) >> 1 | (uid[3] & 0b10000000) >> 6 | (uid[3] & 0b00001000) >> 3;
+    col = checkParity(col) << 7;
+    col |= (uid[4] & 0b10000000) >> 6 | (uid[4] & 0b00001000) >> 3;
+    col = checkParity(col);
+    rawData[7] |= col << 4;
+
+    col = 0;
+    col = (uid[0] & 0b01000000) << 1 | (uid[0] & 0b00000100) << 4 | (uid[1] & 0b01000000) >> 1 | (uid[1] & 0b00000100) << 2 | (uid[2] & 0b01000000) >> 3 | (uid[2] & 0b00000100) >> 0 | (uid[3] & 0b01000000) >> 5 | (uid[3] & 0b00000100) >> 2;
+    col = checkParity(col) << 7;
+    col |= (uid[4] & 0b01000000) >> 5 | (uid[4] & 0b00000100) >> 2;
+    col = checkParity(col);
+    rawData[7] |= col << 3;
+
+    col = 0;
+    col = (uid[0] & 0b00100000) << 2 | (uid[0] & 0b00000010) << 5 | (uid[1] & 0b00100000) >> 0 | (uid[1] & 0b00000010) << 3 | (uid[2] & 0b00100000) >> 2 | (uid[2] & 0b00000010) << 1 | (uid[3] & 0b00100000) >> 4 | (uid[3] & 0b00000010) >> 1;
+    col = checkParity(col) << 7;
+    col |= (uid[4] & 0b00100000) >> 4 | (uid[4] & 0b00000010) >> 1;
+    col = checkParity(col);
+    rawData[7] |= col << 2;
+
+    col = 0;
+    col = (uid[0] & 0b00010000) << 3 | (uid[0] & 0b00000001) << 6 | (uid[1] & 0b00010000) << 1 | (uid[1] & 0b00000001) << 4 | (uid[2] & 0b00010000) >> 1 | (uid[2] & 0b00000001) << 2 | (uid[3] & 0b00010000) >> 3 | (uid[3] & 0b00000001) >> 0;
+    col = checkParity(col) << 7;
+    col |= (uid[4] & 0b00010000) >> 3 | (uid[4] & 0b00000001) >> 0;
+    col = checkParity(col);
+    rawData[7] |= col << 1;
 }
 
 bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                  // Check on even cols with data
@@ -68,16 +97,18 @@ bool RFID_TAG::columnParityCheck(uint8_t *buffer) {                  // Check on
     return true;
 }
 
-uint8_t RFID_TAG::ttAComp(uint32_t timeOut) {              // pulse 0 or 1 or -1 if timeout 
-    byte AcompState, AcompInitState;
+// Work with hardware
+// Reading
+uint8_t RFID_TAG::ttAComp(uint32_t timeOut) {                       // pulse 0 or 1 or -1 if timeout 
+    uint8_t AcompState, AcompInitState;
     uint32_t tEnd = micros() + timeOut;
     AcompInitState = bitRead(ACSR, ACO);                            // читаем флаг компаратора
     do {
         AcompState = bitRead(ACSR, ACO);                            // читаем флаг компаратора
         if (AcompState != AcompInitState) {
-            delayMicroseconds(1000 / (BITRATE * 4));                // 1/4 Period on 2 kBps = 125 mks
+            delayMicroseconds(125);                                 // 1/4 Period on 2 kBps = 125 mks
             AcompState = bitRead(ACSR, ACO);                        // читаем флаг компаратора
-            delayMicroseconds(1000 / (BITRATE * 2));                // 1/2 Period on 2 kBps = 250 mks
+            delayMicroseconds(250);                                 // 1/2 Period on 2 kBps = 250 mks
             return AcompState;
         }
     } while (micros() < tEnd);
@@ -98,35 +129,16 @@ void RFID_TAG::setAC(bool state) {                                  // вклю�
     }
 }
 
-void RFID_TAG::rfidGap(uint16_t timeout) {                          //  Restart PWM on COM2A (pin 11)
-    setAC(false); 
-    delayMicroseconds(timeout);
-    bitSet(TCCR2A, COM2A0);
-}
-
-void RFID_TAG::txBitRfid(uint8_t data) {
-    if (data & 1) {
-        delayMicroseconds(54 * 8);
-    } else {
-        delayMicroseconds(24 * 8);
-    }
-    rfidGap(19 * 8);
-}
-
 bool RFID_TAG::readRFIDTag(uint8_t *buffer) {
     uint32_t tEnd = millis() + 50;
-    uint8_t ti, j, k;
-    j = 0;
-    k = 0;
+    uint8_t ti, j = 0, k = 0;
     for (uint8_t i = 0; i < 64; i++) {                          // читаем 64 bit
         ti = ttAComp();
-        if (ti == 2) {
-            break;                                              // timeout
-        }                                                       
+        if (ti == 2) { break; }                                 // timeout                                            
         if ((ti == 0) && (i < 9)) {                             // если не находим 9 стартовых единиц - начинаем сначала
             if (millis() > tEnd) {
                 ti = 2;
-                break;                                          //timeout
+                break;                                          // timeout
             } 
             i = -1;
             j = 0;
@@ -140,8 +152,7 @@ bool RFID_TAG::readRFIDTag(uint8_t *buffer) {
                     j = 0;
                     k = 0;
                     continue;
-                }
-                k = 0;
+                } else { k = 0; }
             }
         }
         if (ti) { 
@@ -158,23 +169,39 @@ bool RFID_TAG::readRFIDTag(uint8_t *buffer) {
     return columnParityCheck(buffer);
 }
 
-bool RFID_TAG::searchTag(bool copyKey = true) {
+bool RFID_TAG::searchTag(bool copyKey) {
+    readOperationIsDone = false;
+    bool result = false;
     setAC(true);                                                // включаем генератор 125кГц и компаратор
     delay(6);                                                   // переходные процессы детектора
-    if (!readRFIDTag(_keyBuffer)) {
-        if (!copyKey) {
-            setAC(false);                                       // Оключить ШИМ COM2A (pin 11)
-        }
-        return false;
+    if (readRFIDTag(_keyBuffer)) {
+        debugPrintArray(_keyBuffer);
+        if (copyKey) { getUID(_keyBuffer, _uid); }
+        setAC(false); 
+        readOperationIsDone = true;
+        result = true;
     } else {
-        if (copyKey) {
-            getUID(_keyBuffer, _uid);
-
-        } else {
-            setAC(false); 
-        }
-        return true;
+        setAC(false);                                           // Оключить ШИМ COM2A (pin 11)
+        readOperationIsDone = true;
+        result = false;
     }
+    return result;
+}
+
+// Writing
+void RFID_TAG::rfidGap(uint16_t timeout) {                      //  Restart PWM on COM2A (pin 11)
+    setAC(false); 
+    delayMicroseconds(timeout);
+    bitSet(TCCR2A, COM2A0);
+}
+
+void RFID_TAG::txBitRfid(uint8_t data) {
+    if (data & 1) {
+        delayMicroseconds(54 * 8);
+    } else {
+        delayMicroseconds(24 * 8);
+    }
+    rfidGap(19 * 8);
 }
 
 bool RFID_TAG::sendOpT5557(uint8_t opCode, uint32_t password = 0, uint8_t lockBit = 0, uint32_t data = 0, uint8_t blokAddr = 1) {
@@ -195,8 +222,7 @@ bool RFID_TAG::sendOpT5557(uint8_t opCode, uint32_t password = 0, uint8_t lockBi
 }
 
 bool RFID_TAG::T5557_blockRead(uint8_t* buffer) {
-    uint8_t ti, j; 
-    j = 0;
+    uint8_t ti, j = 0; 
     for (uint8_t i = 0; i < 33; i++) {                                                             
         ti = ttAComp(2000);                                     // читаем стартовый 0 и 32 значащих bit
         if (ti == 2) { break; }                                 // timeout
@@ -268,10 +294,13 @@ bool RFID_TAG::write2rfidT5557(uint8_t *buffer)
 }
 
 uint8_t RFID_TAG::writeTag(uint8_t *uid) {
+    writeOperationIsDone = false;
     bool check = true;
     uint8_t rawKey[8];
     getRawData(uid, rawKey);
     if (searchTag(false)) {
+        debugPrintArray(_keyBuffer);
+        debugPrintArray(rawKey);
         for (byte i = 0; i < 8; i++) {
             if (_keyBuffer[i] != rawKey[i]) {  
                 check = false;                                  // сравниваем код для записи с тем, что уже записано в ключе.                                                                                         
@@ -279,22 +308,27 @@ uint8_t RFID_TAG::writeTag(uint8_t *uid) {
             }   
         }                                                                        
         if (check) {
+            writeOperationIsDone = true;
             return 3;                                           // Error - same key
         }                                                                   
     }
     
     if (checkWriteState()) {
         if (write2rfidT5557(rawKey)) { 
+            writeOperationIsDone = true;
             return 1;                                           // Write ok
         } else { 
+            writeOperationIsDone = true;
             return 2;                                           // Write error
         }                                                                    
     } else {
+        writeOperationIsDone = true;
         return 0;                                               // Idle
     }                                                     
 }
 
 void RFID_TAG::emulateKey(uint8_t *keyUID) {                    // send key (Test version)
+    emulationIsDone = false;
     getRawData(keyUID, _keyBuffer);
     setAC(false);                 
     digitalWrite(GENERATOR_PIN, LOW);
@@ -315,5 +349,14 @@ void RFID_TAG::emulateKey(uint8_t *keyUID) {                    // send key (Tes
                 }
             }
         }
-    }  
+    }
+    emulationIsDone = true;  
+}
+
+void RFID_TAG::debugPrintArray(uint8_t* array) {
+    for (uint8_t i = 0; i < 8; i++) {
+        Serial.print(array[i]);
+        Serial.print(" ");
+    }
+    Serial.println();
 }

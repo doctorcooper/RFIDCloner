@@ -6,17 +6,20 @@
 
 class RFID_TAG {
 public:
-    RFID_TAG(uint8_t divider);                       // Constructor (clock divider(1 == 16MHz, 2 == 8MHz))
+    RFID_TAG(uint8_t divider);                          // Constructor (clock divider(1 == 16MHz, 2 == 8MHz))
     bool searchTag(bool copyKey);                       // Action for reading tag
     uint8_t writeTag(uint8_t *uid);
     void getUID(uint8_t *keyUID);                       // Get UID Tag
     void emulateKey(uint8_t *keyUID);
+    bool writeOperationIsDone = true;
+    bool readOperationIsDone = true;
+    bool emulationIsDone = true;
 private:
     uint8_t checkParity(uint8_t byte);                  // Get parity bit
     void getUID(uint8_t *rawData, uint8_t *uid);        // Get UID Tag from raw data
     void getRawData(uint8_t *uid, uint8_t *rawData);    // Get Raw data from UID
     bool columnParityCheck(uint8_t *buffer);            // Check parity bit from column of data
-    uint8_t ttAComp(uint32_t timeOut = 7000);                  // Read data from Analog Comparer
+    uint8_t ttAComp(uint32_t timeOut = 7000);           // Read data from Analog Comparer
     bool readRFIDTag(uint8_t *buffer);                  // Read data from tag
     void setAC(bool state);                             // Control Analog Comparer //ac set on or TCCR...
 
@@ -34,5 +37,6 @@ private:
     uint8_t _uid[5];                                    // UID
     uint8_t _keyBuffer[8];                              // Buffer for raw data
 
-    uint8_t _pwmDivider;                             // Multiplier for PWM (1 == 16MHz, 2 == 8MHz)
+    uint8_t _pwmDivider;                                // Multiplier for PWM (1 == 16MHz, 2 == 8MHz)
+    void debugPrintArray(uint8_t* array);
 };

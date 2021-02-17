@@ -7,6 +7,7 @@
 #include "RFID-TAG-125kHz.h"
 #include <Wire.h>
 #include "KeysStorage.h"
+#include <GyverTimer.h>
 
 //-------------------- Pins define --------------------
 // Nokia display - Adafruit_PCD8544(CLK,DIN,D/C,CE,RST);
@@ -16,13 +17,10 @@
 #define LCD_DC A2
 #define LCD_CE A3
 #define LCD_RST A4
-
 #define BUTTON_PIN 13                           // Sensor button
 
-#define delayAction 100                         // Delay between actions
-#define delayWrite 1000                         // Delay between writtings
-
 #define batPit A7                               // Pin for voltage monitoring
+#define DEBUG 1
 
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN, LOW_PULL, NORM_OPEN);
@@ -30,25 +28,17 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LC
 RFID_TAG reader = RFID_TAG(2);
 KeysStorage storage = KeysStorage();
 
-//-------------------- Variables -----------------------
-uint32_t actionTimeStamp;                       // Timestamp on action
-uint32_t writeTimeStamp;                        // Timestamp on write
-uint8_t writeStatus;                            // Write status ()
-boolean hasReadKey = false;                     // Reak key status(true -> did read)
+GTimer buttonTimer = GTimer(MS, 10);
+GTimer displayTimer = GTimer(MS, 500);
+GTimer rfidOperationTimer = GTimer(MS, 1000);
 
-volatile uint32_t timerMills;                   // Counter mills for timer0
-int32_t timerTimestamp;                         // Timestamp on button reading
-int32_t displayTipestamp;                       // Timestamp on display refreshing
+//-------------------- Variables -----------------------
+uint8_t writeStatus;                            // Write status ()
+bool hasReadKey = false;                        // Read key status(true -> did read)
 
 enum Mode { read, write, emulator } mode;       // Modes
 
 uint8_t keyUID[8];
-
-void writeAction() {
-    if (millis() - writeTimeStamp < delayWrite) { return; }
-    writeTimeStamp = millis();
-    writeStatus = reader.writeTag(keyUID);
-}
 
 void refreshDisplay() {
     display.clearDisplay();
@@ -141,19 +131,6 @@ void saveKey() {                                // Save key handling
     hasReadKey = false;
 }
 
-ISR (TIMER0_COMPA_vect) {                       // Timer0 interrupt 
-    timerMills++;                               // Increment counter
-    if (timerMills - timerTimestamp >= 10) {    // If less more 10ms -> read button
-        timerTimestamp = timerMills;
-        button.tick();
-    }
-
-    if (timerMills - displayTipestamp >= 100) { // If less more 100ms -> refresh info on display
-        displayTipestamp = timerMills;
-        refreshDisplay();
-    }
-}
-
 void readButton() {
     if (button.isHold()) { saveKey(); }         // Hold key -- Save key to EEPROM
 
@@ -192,16 +169,16 @@ void readButton() {
 void action() {                                 // Do action
     switch (mode) {
     case read:
-        if (reader.searchTag(true)) {
+        if (reader.searchTag(true) && reader.readOperationIsDone) {
             reader.getUID(keyUID);
             hasReadKey = true;
         }
         break;
     case write: 
-        writeAction();
+        if (reader.writeOperationIsDone) { writeStatus = reader.writeTag(keyUID); } 
         break;
     case emulator: 
-        reader.emulateKey(keyUID);
+        if (reader.emulationIsDone) { reader.emulateKey(keyUID); }
         break;
     }
 }
@@ -215,18 +192,11 @@ void setupDisplay() {                           // Setup display
 }
 
 void setup() {
-                                                // TIMER0 Setup
-    bitSet(TCCR0A, WGM01);                      // Reset on compare
-    OCR0A = 249;                                // Begin count on overflow
-    bitSet(TIMSK0, OCIE0A);                     // Enable interrupt if compare with register A
-    bitSet(TCCR0B, CS01);                       // Set clock divider on 64
-    bitSet(TCCR0B, CS00);
-    sei();                                      // Enable global interrupts
-
     mode = read;                                // Select start mode
     
-    // Serial.begin(115200);                       // For debug
-
+    #ifdef DEBUG
+    Serial.begin(115200);                       // For debug
+    #endif
     /*                                           
     analogReference(INTERNAL);                  // Initialise internal reference for voltage monitor
     */
@@ -236,8 +206,8 @@ void setup() {
 }
 
 void loop() {
+    if (buttonTimer.isReady()) { button.tick(); }
+    if (displayTimer.isReady()) { refreshDisplay(); }
+    if (rfidOperationTimer.isReady()) { action(); }
     readButton();                               // Read buttons  
-    if (millis() - actionTimeStamp < delayAction) { return; }
-    actionTimeStamp = millis();                 // Timeout between operations
-    action();                                   // Do operation
 }

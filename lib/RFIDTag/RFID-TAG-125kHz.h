@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include <GyverTimer.h>
 /*
     Works on Timer2(Pin 11), Analog comp(Pin 6, 7)
 */
@@ -11,9 +12,11 @@ public:
     uint8_t writeTag(uint8_t *uid);
     void getUID(uint8_t *keyUID);                       // Get UID Tag
     void emulateKey(uint8_t *keyUID);
-    bool writeOperationIsDone = true;
-    bool readOperationIsDone = true;
-    bool emulationIsDone = true;
+    uint8_t* getRawKey();
+    bool writeOperationIsBusy = true;
+    bool readOperationIsBusy = true;
+    volatile bool emulatorEnabled = false;
+    void prepareEmulator();
 private:
     uint8_t checkParity(uint8_t byte);                  // Get parity bit
     void getUID(uint8_t *rawData, uint8_t *uid);        // Get UID Tag from raw data

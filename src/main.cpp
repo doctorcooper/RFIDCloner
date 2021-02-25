@@ -19,8 +19,8 @@
 #define LCD_RST A4
 #define BUTTON_PIN 13                           // Sensor button
 
+// #define DEBUG 0                              // Debug define
 #define batPit A7                               // Pin for voltage monitoring
-#define DEBUG 1
 
 //-------------------- Objects init --------------------
 GButton button(BUTTON_PIN, LOW_PULL, NORM_OPEN);
@@ -38,7 +38,7 @@ bool hasReadKey = false;                        // Read key status(true -> did r
 
 enum Mode { read, write, emulator } mode;       // Modes
 
-uint8_t keyUID[8];
+uint8_t keyUID[5];
 
 void refreshDisplay() {
     display.clearDisplay();
@@ -140,13 +140,19 @@ void readButton() {
         case 1:                                 // Single tap -> Change mode
             switch (mode) {
             case read: 
+                reader.emulatorEnabled = false;
                 mode = write;
+                
                 break;
             case write:
+                reader.emulatorEnabled = true;
+                reader.prepareEmulator();
                 mode = emulator;
                 break;
             case emulator:
+                reader.emulatorEnabled = false;
                 mode = read;
+                
                 break;
             }
             break;
@@ -169,16 +175,16 @@ void readButton() {
 void action() {                                 // Do action
     switch (mode) {
     case read:
-        if (reader.searchTag(true) && reader.readOperationIsDone) {
+        if (reader.searchTag(true) && reader.readOperationIsBusy) {
             reader.getUID(keyUID);
             hasReadKey = true;
         }
         break;
     case write: 
-        if (reader.writeOperationIsDone) { writeStatus = reader.writeTag(keyUID); } 
+        if (reader.writeOperationIsBusy) { writeStatus = reader.writeTag(keyUID); } 
         break;
     case emulator: 
-        if (reader.emulationIsDone) { reader.emulateKey(keyUID); }
+        reader.emulateKey(keyUID);
         break;
     }
 }
@@ -189,6 +195,50 @@ void setupDisplay() {                           // Setup display
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(BLACK);
+}
+
+void setupTimer1() {
+    noInterrupts();
+    // Clear registers
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TCNT1 = 0;
+
+    // 3906.25 Hz (8000000/((2047+1)*1))
+    OCR1A = 2047;
+    // CTC
+    TCCR1B |= (1 << WGM12);
+    // Prescaler 1
+    TCCR1B |= (1 << CS10);
+    // Output Compare Match A Interrupt Enable
+    TIMSK1 |= (1 << OCIE1A);
+    interrupts();
+}
+
+volatile uint8_t bit_counter = 0;
+volatile uint8_t byte_counter = 0;
+volatile uint8_t half = 0;
+
+ISR(TIMER1_COMPA_vect) {
+    if (!reader.emulatorEnabled) { return; }
+    TCNT1=0;
+	if (((reader.getRawKey()[byte_counter] << bit_counter) & 0x80) == 0x00) {
+	    if (half==0) pinMode(11, OUTPUT);
+	    if (half==1) pinMode(11, INPUT);
+	} else {
+	    if (half==0) pinMode(11, INPUT);
+	    if (half==1) pinMode(11, OUTPUT);
+	}
+    
+	half++;
+	if (half == 2) {
+	    half = 0;
+	    bit_counter++;
+	    if (bit_counter == 8) {
+	        bit_counter = 0;
+	        byte_counter = (byte_counter + 1) % 8;
+		}
+	}
 }
 
 void setup() {
@@ -203,6 +253,7 @@ void setup() {
 
     setupDisplay();                             // Setup display
     refreshDisplay();                           // Refresh info on display
+    setupTimer1();                              // Setup timer for emulator
 }
 
 void loop() {
